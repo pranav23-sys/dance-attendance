@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { loadAwards } from "../../../../../lib/awards/awards.storage";
 
 type DanceClass = {
   id: string;
@@ -37,8 +38,6 @@ type PointEvent = {
 };
 
 const LS_POINTS = "bb_points";
-
-
 const LS_CLASSES = "bb_classes";
 const LS_STUDENTS = "bb_students";
 const LS_SESSIONS = "bb_sessions";
@@ -103,7 +102,6 @@ function PieChart({ data }: { data: Record<string, number> }) {
   const entries = Object.entries(data);
   const total = entries.reduce((s, [, v]) => s + v, 0);
 
-  // 🟡 Empty state
   if (total === 0) {
     return (
       <div className="h-36 w-36 rounded-full flex items-center justify-center text-sm text-neutral-400 ring-1 ring-neutral-700">
@@ -113,13 +111,7 @@ function PieChart({ data }: { data: Record<string, number> }) {
   }
 
   let startAngle = 0;
-  const colors = [
-    "#22c55e", // green
-    "#eab308", // yellow
-    "#ef4444", // red
-    "#38bdf8", // blue
-    "#a855f7", // purple
-  ];
+  const colors = ["#22c55e", "#eab308", "#ef4444", "#38bdf8", "#a855f7"];
 
   return (
     <svg viewBox="0 0 32 32" className="h-36 w-36">
@@ -130,21 +122,14 @@ function PieChart({ data }: { data: Record<string, number> }) {
         const start = polarToCartesian(16, 16, 14, startAngle);
         const end = polarToCartesian(16, 16, 14, startAngle + angle);
 
-        const path = `
-          M 16 16
-          L ${start.x} ${start.y}
-          A 14 14 0 ${largeArc} 1 ${end.x} ${end.y}
-          Z
-        `;
-
         startAngle += angle;
 
         return (
           <path
             key={label}
-            d={path}
+            d={`M 16 16 L ${start.x} ${start.y} A 14 14 0 ${largeArc} 1 ${end.x} ${end.y} Z`}
             fill={colors[i % colors.length]}
-            stroke="#0f0f0f"        // ✅ visible separation
+            stroke="#0f0f0f"
             strokeWidth="0.6"
           />
         );
@@ -153,15 +138,10 @@ function PieChart({ data }: { data: Record<string, number> }) {
   );
 }
 
-
 function polarToCartesian(cx: number, cy: number, r: number, angle: number) {
   const rad = ((angle - 90) * Math.PI) / 180;
-  return {
-    x: cx + r * Math.cos(rad),
-    y: cy + r * Math.sin(rad),
-  };
+  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
 }
-
 
 export default function StudentProfilePage() {
   const { studentId } = useParams<{ studentId: string }>();
@@ -171,9 +151,8 @@ export default function StudentProfilePage() {
   const [classes, setClasses] = useState<DanceClass[]>([]);
   const [sessions, setSessions] = useState<RegisterSession[]>([]);
   const [points, setPoints] = useState<PointEvent[]>([]);
+  const [awards, setAwards] = useState<any[]>([]);
 
-
-  /* ---------- LOAD ---------- */
   useEffect(() => {
     setClasses(JSON.parse(localStorage.getItem(LS_CLASSES) || "[]"));
 
@@ -182,15 +161,11 @@ export default function StudentProfilePage() {
     );
     setStudent(allStudents.find((s) => s.id === studentId) || null);
 
-    const allSessions: RegisterSession[] = JSON.parse(
-      localStorage.getItem(LS_SESSIONS) || "[]"
-    );
-    setSessions(allSessions);
-    const allPoints: PointEvent[] = JSON.parse(
-  localStorage.getItem(LS_POINTS) || "[]"
-);
-setPoints(allPoints);
+    setSessions(JSON.parse(localStorage.getItem(LS_SESSIONS) || "[]"));
+    setPoints(JSON.parse(localStorage.getItem(LS_POINTS) || "[]"));
 
+    const allAwards = loadAwards();
+    setAwards(allAwards.filter((a) => a.studentId === studentId));
   }, [studentId]);
 
   const cls = useMemo(
@@ -198,25 +173,26 @@ setPoints(allPoints);
     [classes, student]
   );
 
-  /* ---------- STATS ---------- */
+  const badgeAwards = useMemo(
+    () => awards.filter((a) => a.awardId.includes("month")),
+    [awards]
+  );
+
+  const majorAwards = useMemo(
+    () => awards.filter((a) => !a.awardId.includes("month")),
+    [awards]
+  );
+
   const stats = useMemo(() => {
     if (!student) return null;
 
     const joinedAt = new Date(student.joinedAtISO);
-    const relevant = sessions.filter((s) => {
-  if (s.classId !== student.classId) return false;
-
-  const sessionStart = new Date(s.startedAtISO);
-
-  return (
-    // session started after student joined
-    sessionStart >= joinedAt ||
-
-    // OR student has a mark (joined mid-register)
-    s.marks[student.id] !== undefined
-  );
-});
-
+    const relevant = sessions.filter(
+      (s) =>
+        s.classId === student.classId &&
+        (new Date(s.startedAtISO) >= joinedAt ||
+          s.marks[student.id] !== undefined)
+    );
 
     let attended = 0;
     let possible = 0;
@@ -224,7 +200,6 @@ setPoints(allPoints);
     for (const s of relevant) {
       const mark = s.marks[student.id];
       if (mark === "EXCUSED") continue;
-
       possible += 1;
       if (mark === "PRESENT" || mark === "LATE") attended += 1;
     }
@@ -241,21 +216,19 @@ setPoints(allPoints);
   }, [student, sessions]);
 
   const pointStats = useMemo(() => {
-  if (!student) return null;
+    if (!student) return null;
 
-  const mine = points.filter((p) => p.studentId === student.id);
+    const mine = points.filter((p) => p.studentId === student.id);
+    const byReason: Record<string, number> = {};
+    let total = 0;
 
-  let total = 0;
-  const byReason: Record<string, number> = {};
+    for (const p of mine) {
+      total += p.points;
+      byReason[p.reason] = (byReason[p.reason] ?? 0) + p.points;
+    }
 
-  for (const p of mine) {
-    total += p.points;
-    byReason[p.reason] = (byReason[p.reason] ?? 0) + p.points;
-  }
-
-  return { total, byReason };
-}, [points, student]);
-
+    return { total, byReason };
+  }, [points, student]);
 
   if (!student || !cls || !stats) {
     return (
@@ -269,13 +242,9 @@ setPoints(allPoints);
     <main className="min-h-screen bg-black text-white p-4 pb-24">
       {/* HEADER */}
       <div className="flex items-center gap-3 mb-6">
-        <button
-          onClick={() => router.back()}
-          className="text-neutral-300 text-xl"
-        >
+        <button onClick={() => router.back()} className="text-neutral-300 text-xl">
           ←
         </button>
-
         <div>
           <h1 className="text-2xl font-semibold">{student.name}</h1>
           <p className="text-sm text-neutral-400">
@@ -285,7 +254,7 @@ setPoints(allPoints);
         </div>
       </div>
 
-      {/* STATS CARD */}
+      {/* STATS */}
       <div className="rounded-2xl bg-neutral-900 ring-1 ring-neutral-800 p-5 mb-6 flex items-center gap-4">
         <CircularPercent value={stats.percent} />
         <div>
@@ -295,67 +264,76 @@ setPoints(allPoints);
           </p>
         </div>
       </div>
-      {pointStats && (
-  <>
-    <h2 className="text-lg font-semibold mb-3">Points</h2>
 
-   <div className="rounded-2xl bg-neutral-900 ring-1 ring-neutral-800 p-5 flex gap-6 items-center justify-between">
-
-      <PieChart data={pointStats.byReason} />
-
-      <div className="space-y-2 text-sm">
-        <p className="text-lg font-semibold">
-          Total: {pointStats.total} pts
-        </p>
-
-        {Object.entries(pointStats.byReason).map(([reason, value]) => (
-          <div key={reason} className="flex justify-between gap-4">
-            <span className="text-neutral-300">{reason}</span>
-            <span className="font-semibold">{value}</span>
+      {/* MAJOR AWARDS */}
+      {majorAwards.length > 0 && (
+        <>
+          <h2 className="text-lg font-semibold mb-3">Awards</h2>
+          <div className="space-y-2 mb-6">
+            {majorAwards.map((a) => (
+              <div
+                key={a.id}
+                className="rounded-xl bg-neutral-900 ring-1 ring-neutral-800 px-4 py-3"
+              >
+                <p className="font-semibold">
+                  {a.awardId.replace(/_/g, " ")}
+                </p>
+                <p className="text-xs text-neutral-400">
+                  Earned {new Date(a.unlockedAtISO).toLocaleDateString()}
+                </p>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
-    </div>
-  </>
-)}
+        </>
+      )}
 
+      {/* BADGES */}
+      {badgeAwards.length > 0 && (
+        <>
+          <h3 className="text-sm font-medium text-neutral-400 mb-2">
+            Badges
+          </h3>
+          <div className="flex gap-3 overflow-x-auto pb-2 mb-6">
+            {badgeAwards.map((a) => (
+              <div
+                key={a.id}
+                className="shrink-0 w-44 rounded-xl bg-neutral-900 ring-1 ring-neutral-800 px-3 py-3"
+              >
+                <p className="text-sm font-semibold">
+                  {a.awardId.replace(/_/g, " ").replace(" month", "")}
+                </p>
+                <p className="text-xs text-neutral-400">{a.periodKey}</p>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
 
       {/* HISTORY */}
       <h2 className="text-lg font-semibold mb-3">Attendance history</h2>
 
       <div className="space-y-2">
-        {stats.history.length === 0 ? (
-          <p className="text-neutral-400 text-sm">
-            No attendance records yet.
-          </p>
-        ) : (
-          stats.history.map((s) => {
-            const mark = s.marks[student.id];
-            return (
-              <div
-                key={s.id}
-                className="rounded-xl bg-neutral-900 ring-1 ring-neutral-800 px-4 py-3 flex items-center justify-between"
-              >
-                <div>
-  <p className="text-sm text-neutral-300">
-    {new Date(s.startedAtISO).toLocaleString()}
-  </p>
-  <p className={`text-xs font-semibold ${statusColor(mark)}`}>
-    {mark === "PRESENT" && "Present"}
-    {mark === "LATE" && "Late"}
-    {mark === "ABSENT" && "Absent"}
-    {mark === "EXCUSED" && "Excused"}
-  </p>
-</div>
-
-<span className={`font-bold ${statusColor(mark)}`}>
-  {STATUS_LABEL[mark]}
-</span>
-
+        {stats.history.map((s) => {
+          const mark = s.marks[student.id];
+          return (
+            <div
+              key={s.id}
+              className="rounded-xl bg-neutral-900 ring-1 ring-neutral-800 px-4 py-3 flex justify-between"
+            >
+              <div>
+                <p className="text-sm">
+                  {new Date(s.startedAtISO).toLocaleString()}
+                </p>
+                <p className={`text-xs font-semibold ${statusColor(mark)}`}>
+                  {mark}
+                </p>
               </div>
-            );
-          })
-        )}
+              <span className={`font-bold ${statusColor(mark)}`}>
+                {STATUS_LABEL[mark]}
+              </span>
+            </div>
+          );
+        })}
       </div>
     </main>
   );
