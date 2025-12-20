@@ -1,6 +1,6 @@
 // lib/awards/awards.storage.ts
 
-import { AwardUnlock } from "./awards.types";
+import type { AwardUnlock } from "./awards.types";
 
 const LS_AWARDS = "bb_awards";
 
