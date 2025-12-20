@@ -151,6 +151,18 @@ export default function RegisterPage() {
 
   // If URL has ?session=..., treat as viewing a past register (read-only)
   const isViewingPast = !!sessionFromQuery;
+  const visibleStudents = useMemo(() => {
+  if (!activeSession) return [];
+
+  // Past register → show students who existed in that register
+  if (isViewingPast) {
+    return students.filter((st) => st.id in activeSession.marks);
+  }
+
+  // Current register → hide archived students
+  return students.filter((st) => !st.archived);
+}, [students, activeSession, isViewingPast]);
+
   const isReadOnly = isViewingPast || isRegisterClosed;
 
   const now = useMemo(() => new Date(), []);
@@ -178,7 +190,8 @@ export default function RegisterPage() {
     const savedStudents = localStorage.getItem(LS_STUDENTS);
     if (savedStudents) {
       const all: Student[] = JSON.parse(savedStudents);
-      setStudents(all.filter((s) => s.classId === classId && !s.archived));
+      setStudents(all.filter((s) => s.classId === classId));
+
     } else {
       setStudents([]);
     }
@@ -244,7 +257,7 @@ export default function RegisterPage() {
     // Create first session for today
     const id = crypto.randomUUID();
     const marks: Record<string, Status> = {};
-    students.forEach((st) => (marks[st.id] = "ABSENT"));
+    
 
     const newSession: RegisterSession = {
       id,
@@ -275,8 +288,8 @@ export default function RegisterPage() {
       if (joinedAt > sessionStart) continue;
 
       if (!(st.id in marks)) {
-        marks[st.id] = "ABSENT";
-        changed = true;
+        
+        
       }
     }
 
@@ -543,17 +556,18 @@ export default function RegisterPage() {
           </div>
         ) : (
           <div className="grid gap-3">
-            {students
+            {visibleStudents
               .slice()
               .sort((a, b) => a.name.localeCompare(b.name))
               .map((st) => {
-                const status = activeSession.marks[st.id] ?? "ABSENT";
+                const status = activeSession.marks[st.id] ?? null;
                 const pct = percentageByStudent[st.id] ?? 0;
 
                 return (
                   <div
                     key={st.id}
-                    className={["rounded-2xl p-4 transition active:scale-[0.99]", statusRowBg(status)].join(" ")}
+                    className={["rounded-2xl p-4 transition active:scale-[0.99]", status ? statusRowBg(status) : "bg-neutral-900 ring-1 ring-neutral-800"
+  ].join(" ")}
                     onClick={async () => cycleStatus(st.id)}
                     role="button"
                     tabIndex={0}
@@ -591,7 +605,7 @@ export default function RegisterPage() {
                       </div>
 
                       <div className="text-sm font-bold text-white/90 px-2 py-1 rounded-lg bg-black/30">
-                        {STATUS_LABEL[status]}
+                        {status ? STATUS_LABEL[status] : "—"}
                       </div>
                     </div>
 
@@ -678,15 +692,26 @@ export default function RegisterPage() {
               disabled={isRegisterClosed}
               onClick={async () => {
   const closedAt = new Date().toISOString();
+// ✅ Fill missing attendance as ABSENT before closing
+const filledMarks = { ...activeSession.marks };
+
+visibleStudents.forEach((st) => {
+  if (!(st.id in filledMarks)) {
+    filledMarks[st.id] = "ABSENT";
+  }
+});
+
+
 
   // 1️⃣ Close the register
   setSessions((prev) =>
-    prev.map((s) =>
-      s.id === activeSession.id
-        ? { ...s, closedAtISO: closedAt }
-        : s
-    )
-  );
+  prev.map((s) =>
+    s.id === activeSession.id
+      ? { ...s, marks: filledMarks, closedAtISO: closedAt }
+      : s
+  )
+);
+
 
   // 2️⃣ Load fresh data (awards logic needs full context)
   const allStudents = JSON.parse(
