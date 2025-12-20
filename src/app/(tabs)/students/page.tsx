@@ -193,8 +193,11 @@ export default function StudentsPage() {
                 </select>
 
                 <button
-                  onClick={() => archiveStudent(s.id)}
-                  className="text-xs text-neutral-400 hover:text-red-400"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    archiveStudent(s.id);
+                  }}
+                  className="text-xs text-neutral-400 hover:text-red-400 px-3 py-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
                 >
                   Archive
                 </button>
@@ -228,8 +231,11 @@ export default function StudentsPage() {
                     {new Date(s.startedAtISO).toLocaleString()}
                   </span>
                   <button
-                    onClick={() => deleteSession(s.id)}
-                    className="text-red-400"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteSession(s.id);
+                    }}
+                    className="text-red-400 px-3 py-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
                   >
                     Delete
                   </button>
