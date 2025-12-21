@@ -13,7 +13,11 @@ type Class = {
 
 type Student = {
   id: string;
+  name: string;
+  classId: string;
+  joinedAtISO: string;
   archived?: boolean;
+  deleted?: boolean;
 };
 
 type AttendanceMark = "PRESENT" | "LATE" | "ABSENT" | "EXCUSED";

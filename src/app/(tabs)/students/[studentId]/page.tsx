@@ -8,6 +8,7 @@ type DanceClass = {
   id: string;
   name: string;
   color: string;
+  deleted?: boolean;
 };
 
 type Student = {
@@ -16,6 +17,7 @@ type Student = {
   classId: string;
   joinedAtISO: string;
   archived?: boolean;
+  deleted?: boolean;
 };
 
 type Status = "ABSENT" | "PRESENT" | "LATE" | "EXCUSED";
@@ -25,6 +27,7 @@ type RegisterSession = {
   classId: string;
   startedAtISO: string;
   marks: Record<string, Status>;
+  deleted?: boolean;
 };
 
 type PointEvent = {
@@ -35,6 +38,7 @@ type PointEvent = {
   points: number;
   createdAtISO: string;
   sessionId?: string;
+  deleted?: boolean;
 };
 
 const LS_POINTS = "bb_points";
