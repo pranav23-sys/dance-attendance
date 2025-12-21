@@ -148,13 +148,13 @@ export default function ClassesPage() {
       </div>
 
       {/* Class list */}
-      {classes.length === 0 ? (
+      {classes.filter(c => !c.deleted).length === 0 ? (
         <p className="text-neutral-400">
           No classes yet. Add your first class.
         </p>
       ) : (
         <div className="grid gap-4">
-          {classes.map((c) => (
+          {classes.filter(c => !c.deleted).map((c) => (
             <div
   key={c.id}
   onClick={() => router.push(`/register/${c.id}`)}

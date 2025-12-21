@@ -158,7 +158,7 @@ export default function StudentsPage() {
           onChange={(e) => setNewClassId(e.target.value)}
         >
           <option value="">Select class</option>
-          {classes.map((c) => (
+          {classes.filter(c => !c.deleted).map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
             </option>
@@ -175,7 +175,7 @@ export default function StudentsPage() {
 
       {/* STUDENTS LIST */}
       <div className="space-y-4">
-        {students.filter((s) => !s.archived).map((s) => {
+        {students.filter((s) => !s.archived && !s.deleted).map((s) => {
           const cls = classes.find((c) => c.id === s.classId);
 
           return (
@@ -237,6 +237,8 @@ export default function StudentsPage() {
 
       <div className="space-y-4">
         {Object.entries(sessionsByClass).map(([classId, list]) => {
+          // Filter out deleted sessions
+          const filteredList = list.filter(s => !s.deleted);
           const cls = classes.find((c) => c.id === classId);
           return (
             <div
@@ -245,7 +247,7 @@ export default function StudentsPage() {
             >
               <p className="font-medium mb-3">{cls?.name}</p>
 
-              {list.map((s) => (
+              {filteredList.map((s) => (
                 <div
                   key={s.id}
                   className="flex justify-between text-sm text-neutral-400 py-1"

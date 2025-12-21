@@ -154,7 +154,7 @@ export default function HomePage() {
         </h2>
 
         <div className="space-y-3">
-          {classes.map((cls) => {
+          {classes.filter(cls => !cls.deleted).map((cls) => {
             const openSession = getOpenSessionForClass(cls.id);
 
             return (

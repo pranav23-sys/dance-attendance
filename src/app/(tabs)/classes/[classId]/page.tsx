@@ -107,7 +107,7 @@ export default function ClassProfilePage() {
     );
     setStudents(
       allStudents.filter(
-        (s) => s.classId === classId && !s.archived
+        (s) => s.classId === classId && !s.archived && !s.deleted
       )
     );
 
