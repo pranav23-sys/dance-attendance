@@ -89,7 +89,7 @@ class SyncManager {
       // Listen for online/offline events
       window.addEventListener('online', () => {
         this.isOnline = true;
-        this.performFullSync();
+        this.syncFromCloud();
       });
 
       window.addEventListener('offline', () => {
