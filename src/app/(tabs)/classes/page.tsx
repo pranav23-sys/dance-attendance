@@ -84,8 +84,7 @@ export default function ClassesPage() {
   };
 
   const deleteClass = async (id: string) => {
-    const ok = confirm("Delete this class?\nThis cannot be undone.");
-    if (!ok) return;
+    console.log('deleteClass called for:', id);
 
     // Mark class as deleted instead of filtering it out
     const updatedClasses = classes.map((c) =>
@@ -93,10 +92,13 @@ export default function ClassesPage() {
         ? { ...c, deleted: true, synced: false, updatedAt: new Date().toISOString() }
         : c
     );
+
+    console.log('Updated classes:', updatedClasses.filter(c => c.deleted));
     setClasses(updatedClasses);
 
     try {
       await saveClasses(updatedClasses);
+      console.log('Class marked as deleted successfully');
     } catch (error) {
       console.error('Error deleting class:', error);
       // Deletion will be synced when connection is restored
@@ -180,9 +182,11 @@ export default function ClassesPage() {
   <button
     onClick={(e) => {
       e.stopPropagation();
-      deleteClass(c.id);
+      if (confirm(`Delete "${c.name}" class?\nThis cannot be undone.`)) {
+        deleteClass(c.id);
+      }
     }}
-    className="absolute top-3 right-3 text-neutral-400 hover:text-red-400 transition"
+    className="absolute top-3 right-3 text-neutral-400 hover:text-red-400 transition p-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
     aria-label="Delete class"
   >
     🗑️

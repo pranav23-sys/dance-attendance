@@ -108,7 +108,7 @@ export default function StudentsPage() {
   };
 
   const deleteSession = async (id: string) => {
-    if (!confirm("Delete this register? This cannot be undone.")) return;
+    console.log('deleteSession called for:', id);
 
     // Mark session as deleted instead of filtering it out
     const updatedSessions = sessions.map((s) =>
@@ -116,10 +116,13 @@ export default function StudentsPage() {
         ? { ...s, deleted: true, synced: false, updatedAt: new Date().toISOString() }
         : s
     );
+
+    console.log('Updated sessions:', updatedSessions.filter(s => s.deleted));
     setSessions(updatedSessions);
 
     try {
       await saveSessions(updatedSessions);
+      console.log('Session marked as deleted successfully');
     } catch (error) {
       console.error('Error deleting session:', error);
     }
@@ -258,9 +261,12 @@ export default function StudentsPage() {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      deleteSession(s.id);
+                      const sessionTime = new Date(s.startedAtISO).toLocaleString();
+                      if (confirm(`Delete register from ${sessionTime}?\nThis cannot be undone.`)) {
+                        deleteSession(s.id);
+                      }
                     }}
-                    className="text-red-400 px-3 py-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
+                    className="text-red-400 px-3 py-2 min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-red-400/10 transition"
                   >
                     Delete
                   </button>
