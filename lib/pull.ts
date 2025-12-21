@@ -1,21 +1,13 @@
-import { supabase } from "./supabase";
+// Legacy pull functions - now handled by sync-manager.ts
+// These functions are kept for backward compatibility during migration
+
+import { syncManager } from "./sync-manager";
 
 export async function pullPoints() {
-  const { data, error } = await supabase.from("points").select("*");
-  if (error || !data) return;
-
-  const local = JSON.parse(localStorage.getItem("bb_points") || "[]");
-
-  const map = new Map();
-  [...local, ...data].forEach((p) => {
-    const existing = map.get(p.id);
-    if (!existing || existing.updatedAtISO < p.updatedAtISO) {
-      map.set(p.id, p);
-    }
-  });
-
-  localStorage.setItem(
-    "bb_points",
-    JSON.stringify(Array.from(map.values()))
-  );
+  // Use the new sync manager for full sync
+  try {
+    await syncManager.performFullSync();
+  } catch (error) {
+    console.error("Pull failed", error);
+  }
 }

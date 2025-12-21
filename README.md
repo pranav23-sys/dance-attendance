@@ -1,22 +1,60 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🎭 Bollywood Beatz - Dance Attendance App
 
-## Getting Started
+A modern, offline-first dance class management application built with Next.js, TypeScript, and Tailwind CSS.
 
-First, run the development server:
+## ✨ Features
+
+- **📱 Offline-First**: Works completely without internet - data stored locally
+- **👥 Student Management**: Add, move, and archive students across classes
+- **📋 Attendance Tracking**: Take attendance with Present/Late/Absent/Excused marks
+- **🏆 Points & Awards**: Reward system with automatic award calculations
+- **📊 Analytics**: View attendance stats, leaderboards, and reports
+- **🔄 Cloud Sync Ready**: Optional Supabase integration for multi-device sync
+- **🎨 Beautiful UI**: Modern dark theme with smooth animations
+
+## 🚀 Quick Start
+
+**The app works immediately - no setup required!**
 
 ```bash
+# Install dependencies
+npm install
+
+# Start development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) and start using the app!
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 📱 What You Can Do
+
+1. **Create Classes** - Add dance classes with custom colors
+2. **Add Students** - Manage your dance students
+3. **Take Attendance** - Mark attendance during classes
+4. **Give Points** - Reward students for good behavior/practice
+5. **View Awards** - See automatic award calculations and leaderboards
+6. **Track Progress** - Monitor attendance and performance over time
+
+## 🚨 **Multi-Device Note**
+
+**Currently: Single Device Only**
+- Each device/browser has its own separate data
+- Data is stored locally and doesn't sync between devices
+- Perfect for offline use on one device
+
+**Want Multi-Device Sync?**
+Follow `SYNC_SETUP_README.md` to add Supabase cloud sync!
+
+## 🔄 Adding Cloud Sync (Optional)
+
+When you're ready for multi-device sync:
+
+1. Set up a [Supabase](https://supabase.com) account
+2. Run the database schema from `supabase-schema.sql`
+3. Add your credentials to `.env.local`
+4. Your data will automatically sync across devices!
+
+See `SYNC_SETUP_README.md` for detailed instructions.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 

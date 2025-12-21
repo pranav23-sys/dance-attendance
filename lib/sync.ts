@@ -1,25 +1,13 @@
-import { supabase } from "./supabase";
+// Legacy sync functions - now handled by sync-manager.ts
+// These functions are kept for backward compatibility during migration
+
+import { syncManager } from "./sync-manager";
 
 export async function syncPoints(points: any[]) {
-  const unsynced = points.filter((p) => !p.synced);
-
-  if (unsynced.length === 0) return;
-
-  const { error } = await supabase
-    .from("points")
-    .upsert(unsynced, { onConflict: "id" });
-
-  if (error) {
+  // Use the new sync manager
+  try {
+    await syncManager.savePoints(points);
+  } catch (error) {
     console.error("Sync failed", error);
-    return;
   }
-
-  // mark as synced locally
-  const updated = points.map((p) =>
-    unsynced.find((u) => u.id === p.id)
-      ? { ...p, synced: true }
-      : p
-  );
-
-  localStorage.setItem("bb_points", JSON.stringify(updated));
 }

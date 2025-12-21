@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSyncData } from "@/lib/sync-manager";
+import type { RegisterSession } from "@/lib/sync-manager";
 
 type Class = {
   id: string;
@@ -26,17 +28,39 @@ type Session = {
 
 export default function HomePage() {
   const router = useRouter();
+  const { getClasses, getStudents, getSessions, saveSessions } = useSyncData();
 
   const [classes, setClasses] = useState<Class[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
-  const [sessions, setSessions] = useState<Session[]>([]);
+  const [sessions, setSessions] = useState<RegisterSession[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Read data (read-only on load)
+  // Load data from sync manager (online-first)
   useEffect(() => {
-    setClasses(JSON.parse(localStorage.getItem("bb_classes") || "[]"));
-    setStudents(JSON.parse(localStorage.getItem("bb_students") || "[]"));
-    setSessions(JSON.parse(localStorage.getItem("bb_sessions") || "[]"));
-  }, []);
+    const loadData = async () => {
+      try {
+        const [classesData, studentsData, sessionsData] = await Promise.all([
+          getClasses(),
+          getStudents(),
+          getSessions(),
+        ]);
+
+        setClasses(classesData);
+        setStudents(studentsData);
+        setSessions(sessionsData);
+      } catch (error) {
+        console.error('Error loading data:', error);
+        // Fallback to localStorage if sync fails
+        setClasses(JSON.parse(localStorage.getItem("bb_classes") || "[]"));
+        setStudents(JSON.parse(localStorage.getItem("bb_students") || "[]"));
+        setSessions(JSON.parse(localStorage.getItem("bb_sessions") || "[]"));
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, [getClasses, getStudents, getSessions]);
 
   // Greeting
   const greeting = useMemo(() => {
@@ -83,7 +107,7 @@ export default function HomePage() {
   }, [sessions, students]);
 
   // Class tap
-  const handleClassTap = (cls: Class) => {
+  const handleClassTap = async (cls: Class) => {
     const openSession = getOpenSessionForClass(cls.id);
 
     if (openSession) {
@@ -91,17 +115,24 @@ export default function HomePage() {
       return;
     }
 
-    const newSession: Session = {
+    const newSession: RegisterSession = {
       id: crypto.randomUUID(),
       classId: cls.id,
       startedAtISO: new Date().toISOString(),
       marks: {},
     };
 
-    localStorage.setItem(
-      "bb_sessions",
-      JSON.stringify([...sessions, newSession])
-    );
+    // Update local state immediately for responsive UI
+    const updatedSessions = [...sessions, newSession];
+    setSessions(updatedSessions);
+
+    // Save to sync manager (will handle online/offline)
+    try {
+      await saveSessions(updatedSessions);
+    } catch (error) {
+      console.error('Error saving session:', error);
+      // Session will be synced when connection is restored
+    }
 
     router.push(`/register/${cls.id}`);
   };

@@ -2,45 +2,12 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-
-type ClassRec = { id: string; name?: string; archived?: boolean };
-type Student = {
-  id: string;
-  name: string;
-  classId: string;
-  joinedAtISO: string;
-  archived?: boolean;
-};
+import { useSyncData } from "@/lib/sync-manager";
+import type { DanceClass, Student, RegisterSession, PointEvent, AwardUnlock } from "@/lib/sync-manager";
 
 type Mark = "PRESENT" | "LATE" | "ABSENT" | "EXCUSED";
-
-type RegisterSession = {
-  id: string;
-  classId: string;
-  startedAtISO: string;
-  marks: Record<string, Mark>;
-};
-
-type PointEvent = {
-  id: string;
-  studentId: string;
-  classId: string;
-  points: number;
-  createdAtISO: string;
-};
-
 type AwardId = "student_of_month" | "most_improved_year" | "student_of_year";
-
-type AwardUnlock = {
-  id: string;
-  awardId: AwardId;
-  studentId: string;
-  classId: string;
-  periodType: "RANGE" | "ACADEMIC_YEAR";
-  periodKey: string;
-  unlockedAtISO: string;
-  decidedBy: "TEACHER";
-};
+type PeriodType = "RANGE" | "ACADEMIC_YEAR";
 
 type AwardsMeta = {
   sotm?: {
@@ -149,11 +116,11 @@ function getAcademicYearBounds(now: Date) {
   return { start, end, key };
 }
 
-function markToAttended(mark: Mark) {
+function markToAttended(mark: string) {
   return mark === "PRESENT" || mark === "LATE";
 }
 
-function isExcused(mark: Mark) {
+function isExcused(mark: string) {
   return mark === "EXCUSED";
 }
 
@@ -171,13 +138,15 @@ function pct(n01: number) {
 
 export default function AwardsPage() {
   const router = useRouter();
+  const { getClasses, getStudents, getSessions, getPoints, getAwards, saveAwards } = useSyncData();
 
-  const [classes, setClasses] = useState<ClassRec[]>([]);
+  const [classes, setClasses] = useState<DanceClass[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [sessions, setSessions] = useState<RegisterSession[]>([]);
   const [points, setPoints] = useState<PointEvent[]>([]);
   const [awards, setAwards] = useState<AwardUnlock[]>([]);
   const [awardsMeta, setAwardsMeta] = useState<AwardsMeta>({});
+  const [loading, setLoading] = useState(true);
 
   const [selectedClassId, setSelectedClassId] = useState<string>("");
   const [fromDate, setFromDate] = useState<string>(() => {
@@ -199,25 +168,56 @@ export default function AwardsPage() {
   }, [toast]);
 
   useEffect(() => {
-    // Load all localStorage keys
-    const cls = safeParseJSON<ClassRec[]>(localStorage.getItem("bb_classes"), []);
-    const stu = safeParseJSON<Student[]>(localStorage.getItem("bb_students"), []);
-    const ses = safeParseJSON<RegisterSession[]>(localStorage.getItem("bb_sessions"), []);
-    const pts = safeParseJSON<PointEvent[]>(localStorage.getItem("bb_points"), []);
-    const aws = safeParseJSON<AwardUnlock[]>(localStorage.getItem("bb_awards"), []);
-    const meta = safeParseJSON<AwardsMeta>(localStorage.getItem("bb_awards_meta"), {});
+    const loadData = async () => {
+      try {
+        const [classesData, studentsData, sessionsData, pointsData, awardsData] = await Promise.all([
+          getClasses(),
+          getStudents(),
+          getSessions(),
+          getPoints(),
+          getAwards(),
+        ]);
 
-    setClasses(Array.isArray(cls) ? cls : []);
-    setStudents(Array.isArray(stu) ? stu : []);
-    setSessions(Array.isArray(ses) ? ses : []);
-    setPoints(Array.isArray(pts) ? pts : []);
-    setAwards(Array.isArray(aws) ? aws : []);
-    setAwardsMeta(meta && typeof meta === "object" ? meta : {});
+        setClasses(classesData);
+        setStudents(studentsData);
+        setSessions(sessionsData);
+        setPoints(pointsData);
+        setAwards(awardsData);
 
-    // Default class selection
-    const firstActive = (Array.isArray(cls) ? cls : []).find((c) => c && typeof c.id === "string");
-    if (firstActive?.id) setSelectedClassId(firstActive.id);
-  }, []);
+        // Load awards meta from localStorage (not synced yet)
+        const meta = safeParseJSON<AwardsMeta>(localStorage.getItem("bb_awards_meta"), {});
+        setAwardsMeta(meta && typeof meta === "object" ? meta : {});
+
+        // Default class selection
+        const firstActive = classesData.find((c) => c && typeof c.id === "string");
+        if (firstActive?.id) setSelectedClassId(firstActive.id);
+      } catch (error) {
+        console.error('Error loading awards data:', error);
+        // Fallback to localStorage
+        const cls = safeParseJSON<DanceClass[]>(localStorage.getItem("bb_classes"), []);
+        const stu = safeParseJSON<Student[]>(localStorage.getItem("bb_students"), []);
+        const ses = safeParseJSON<RegisterSession[]>(localStorage.getItem("bb_sessions"), []);
+        const pts = safeParseJSON<PointEvent[]>(localStorage.getItem("bb_points"), []);
+        const aws = safeParseJSON<AwardUnlock[]>(localStorage.getItem("bb_awards"), []);
+        const meta = safeParseJSON<AwardsMeta>(localStorage.getItem("bb_awards_meta"), {});
+
+        setClasses(Array.isArray(cls) ? cls : []);
+        setStudents(Array.isArray(stu) ? stu : []);
+        setSessions(Array.isArray(ses) ? ses : []);
+        setPoints(Array.isArray(pts) ? pts : []);
+        setAwards(Array.isArray(aws) ? aws : []);
+        setAwardsMeta(meta && typeof meta === "object" ? meta : {});
+
+        // Default class selection
+        const firstActive = (Array.isArray(cls) ? cls : []).find((c) => c && typeof c.id === "string");
+        if (firstActive?.id) setSelectedClassId(firstActive.id);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, [getClasses, getStudents, getSessions, getPoints, getAwards]);
 
   const selectedClass = useMemo(() => classes.find((c) => c.id === selectedClassId) ?? null, [classes, selectedClassId]);
 
@@ -504,9 +504,23 @@ export default function AwardsPage() {
     return { yearKey: key, start, end, top3: rows.slice(0, 3) };
   }, [validClass, selectedClassId, classStudents, classSessions, points]);
 
-  function writeAwards(next: AwardUnlock[]) {
+  async function writeAwards(next: AwardUnlock[]) {
     setAwards(next);
-    localStorage.setItem("bb_awards", JSON.stringify(next));
+
+    // Add sync metadata
+    const awardsWithMeta = next.map(award => ({
+      ...award,
+      synced: false,
+      updatedAt: new Date().toISOString(),
+    }));
+
+    try {
+      await saveAwards(awardsWithMeta);
+    } catch (error) {
+      console.error('Error saving awards:', error);
+      // Fallback to localStorage
+      localStorage.setItem("bb_awards", JSON.stringify(next));
+    }
   }
 
   function writeAwardsMeta(next: AwardsMeta) {
@@ -526,7 +540,7 @@ export default function AwardsPage() {
       awardId: "student_of_month",
       studentId,
       classId: selectedClassId,
-      periodType: "RANGE",
+      periodType: "RANGE" as const,
       periodKey,
       unlockedAtISO: isoNow(),
       decidedBy: "TEACHER",
@@ -561,7 +575,7 @@ export default function AwardsPage() {
       awardId: "most_improved_year",
       studentId,
       classId: selectedClassId,
-      periodType: "ACADEMIC_YEAR",
+      periodType: "ACADEMIC_YEAR" as const,
       periodKey: key,
       unlockedAtISO: isoNow(),
       decidedBy: "TEACHER",
@@ -582,7 +596,7 @@ export default function AwardsPage() {
       awardId: "student_of_year",
       studentId,
       classId: selectedClassId,
-      periodType: "ACADEMIC_YEAR",
+      periodType: "ACADEMIC_YEAR" as const,
       periodKey: key,
       unlockedAtISO: isoNow(),
       decidedBy: "TEACHER",

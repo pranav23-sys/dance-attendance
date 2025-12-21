@@ -4,25 +4,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { createPortal } from "react-dom";
+import { useSyncData } from "@/lib/sync-manager";
+import type { DanceClass, Student, RegisterSession, PointEvent } from "@/lib/sync-manager";
 
 
 
-type DanceClass = {
-  id: string;
-  name: string;
-  color: string;
-};
-
-type PointEvent = {
-  id: string;
-  studentId: string;
-  classId: string;
-  reason: string;
-  points: number;
-  createdAtISO: string;
-  sessionId?: string; // used to dedupe "On Time" per register session
-};
-
+// Points are now managed by sync manager
 const LS_POINTS = "bb_points";
 
 const POINT_PRESETS = [
@@ -32,23 +19,7 @@ const POINT_PRESETS = [
   { id: "impress", label: "Impressed Me", points: 2, icon: "🔥" },
 ] as const;
 
-type Student = {
-  id: string;
-  name: string;
-  classId: string;
-  joinedAtISO: string; // when they joined THIS class
-  archived?: boolean;
-};
-
 type Status = "ABSENT" | "PRESENT" | "LATE" | "EXCUSED";
-
-type RegisterSession = {
-  id: string;
-  classId: string;
-  startedAtISO: string;
-  marks: Record<string, Status>;
-  closedAtISO?: string;
-};
 
 const LS_CLASSES = "bb_classes";
 const LS_STUDENTS = "bb_students";
@@ -127,6 +98,7 @@ export default function RegisterPage() {
   const { classId } = useParams<{ classId: string }>();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { getClasses, getStudents, getSessions, getPoints, saveSessions, savePoints } = useSyncData();
   const sessionFromQuery = searchParams.get("session"); // 👈 ?session=...
 
   const [hydrated, setHydrated] = useState(false);

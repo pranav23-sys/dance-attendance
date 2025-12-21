@@ -2,30 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSyncData } from "@/lib/sync-manager";
+import type { DanceClass, Student, RegisterSession } from "@/lib/sync-manager";
 
 /* ---------- TYPES ---------- */
-type DanceClass = {
-  id: string;
-  name: string;
-  color: string;
-};
-
-type Student = {
-  id: string;
-  name: string;
-  classId: string;
-  joinedAtISO: string;
-  archived?: boolean;
-};
-
 type Status = "ABSENT" | "PRESENT" | "LATE" | "EXCUSED";
-
-type RegisterSession = {
-  id: string;
-  classId: string;
-  startedAtISO: string;
-  marks: Record<string, Status>;
-};
 
 /* ---------- STORAGE KEYS ---------- */
 const LS_CLASSES = "bb_classes";
@@ -34,6 +15,7 @@ const LS_SESSIONS = "bb_sessions";
 
 export default function StudentsPage() {
   const router = useRouter();
+  const { getClasses, getStudents, getSessions, saveStudents, saveSessions } = useSyncData();
 
   const [classes, setClasses] = useState<DanceClass[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
@@ -41,65 +23,101 @@ export default function StudentsPage() {
 
   const [newName, setNewName] = useState("");
   const [newClassId, setNewClassId] = useState("");
+  const [loading, setLoading] = useState(true);
 
-  const [hydrated, setHydrated] = useState(false); // 🔑 critical fix
-
-  /* ---------- LOAD (ONCE) ---------- */
+  /* ---------- LOAD DATA ---------- */
   useEffect(() => {
-    setClasses(JSON.parse(localStorage.getItem(LS_CLASSES) || "[]"));
-    setStudents(JSON.parse(localStorage.getItem(LS_STUDENTS) || "[]"));
-    setSessions(JSON.parse(localStorage.getItem(LS_SESSIONS) || "[]"));
-    setHydrated(true);
-  }, []);
+    const loadData = async () => {
+      try {
+        const [classesData, studentsData, sessionsData] = await Promise.all([
+          getClasses(),
+          getStudents(),
+          getSessions(),
+        ]);
 
-  /* ---------- SAVE (GUARDED) ---------- */
-  useEffect(() => {
-    if (!hydrated) return;
-    localStorage.setItem(LS_STUDENTS, JSON.stringify(students));
-  }, [students, hydrated]);
+        setClasses(classesData);
+        setStudents(studentsData);
+        setSessions(sessionsData);
+      } catch (error) {
+        console.error('Error loading data:', error);
+        // Fallback to localStorage
+        setClasses(JSON.parse(localStorage.getItem(LS_CLASSES) || "[]"));
+        setStudents(JSON.parse(localStorage.getItem(LS_STUDENTS) || "[]"));
+        setSessions(JSON.parse(localStorage.getItem(LS_SESSIONS) || "[]"));
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  useEffect(() => {
-    if (!hydrated) return;
-    localStorage.setItem(LS_SESSIONS, JSON.stringify(sessions));
-  }, [sessions, hydrated]);
+    loadData();
+  }, [getClasses, getStudents, getSessions]);
 
   /* ---------- ACTIONS ---------- */
-  const addStudent = () => {
+  const addStudent = async () => {
     if (!newName.trim() || !newClassId) return;
 
-    setStudents((prev) => [
-      ...prev,
-      {
-        id: crypto.randomUUID(),
-        name: newName.trim(),
-        classId: newClassId,
-        joinedAtISO: new Date().toISOString(),
-      },
-    ]);
+    const newStudent: Student = {
+      id: crypto.randomUUID(),
+      name: newName.trim(),
+      classId: newClassId,
+      joinedAtISO: new Date().toISOString(),
+      synced: false,
+      updatedAt: new Date().toISOString(),
+    };
+
+    const updatedStudents = [...students, newStudent];
+    setStudents(updatedStudents);
+
+    try {
+      await saveStudents(updatedStudents);
+    } catch (error) {
+      console.error('Error saving student:', error);
+    }
 
     setNewName("");
   };
 
-  const moveStudent = (id: string, classId: string) => {
-    setStudents((prev) =>
-      prev.map((s) =>
-        s.id === id
-          ? { ...s, classId, joinedAtISO: new Date().toISOString() }
-          : s
-      )
+  const moveStudent = async (id: string, classId: string) => {
+    const updatedStudents = students.map((s) =>
+      s.id === id
+        ? { ...s, classId, joinedAtISO: new Date().toISOString(), synced: false, updatedAt: new Date().toISOString() }
+        : s
     );
+    setStudents(updatedStudents);
+
+    try {
+      await saveStudents(updatedStudents);
+    } catch (error) {
+      console.error('Error moving student:', error);
+    }
   };
 
-  const archiveStudent = (id: string) => {
+  const archiveStudent = async (id: string) => {
     if (!confirm("Archive this student?")) return;
-    setStudents((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, archived: true } : s))
+
+    const updatedStudents = students.map((s) =>
+      s.id === id ? { ...s, archived: true, synced: false, updatedAt: new Date().toISOString() } : s
     );
+    setStudents(updatedStudents);
+
+    try {
+      await saveStudents(updatedStudents);
+    } catch (error) {
+      console.error('Error archiving student:', error);
+    }
   };
 
-  const deleteSession = (id: string) => {
+  const deleteSession = async (id: string) => {
     if (!confirm("Delete this register? This cannot be undone.")) return;
-    setSessions((prev) => prev.filter((s) => s.id !== id));
+
+    const updatedSessions = sessions.filter((s) => s.id !== id);
+    setSessions(updatedSessions);
+
+    try {
+      await saveSessions(updatedSessions);
+    } catch (error) {
+      console.error('Error deleting session:', error);
+    }
   };
 
   /* ---------- DERIVED ---------- */

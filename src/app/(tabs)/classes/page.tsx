@@ -2,12 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-
-type DanceClass = {
-  id: string;
-  name: string;
-  color: string;
-};
+import { useSyncData } from "@/lib/sync-manager";
+import type { DanceClass } from "@/lib/sync-manager";
 
 const CLASS_COLORS = [
   "#ff8c1a", // brand orange
@@ -22,32 +18,37 @@ const CLASS_COLORS = [
 
 export default function ClassesPage() {
   const router = useRouter();
+  const { getClasses, saveClasses } = useSyncData();
 
   const [classes, setClasses] = useState<DanceClass[]>([]);
   const [newClassName, setNewClassName] = useState("");
   const [selectedColor, setSelectedColor] = useState(CLASS_COLORS[0]);
+  const [loading, setLoading] = useState(true);
 
-  // 🔑 prevents dev-mode double-mount wiping localStorage
-  const [hydrated, setHydrated] = useState(false);
-
-  /* ---------- LOAD (once) ---------- */
+  /* ---------- LOAD DATA ---------- */
   useEffect(() => {
-    const saved = localStorage.getItem("bb_classes");
-    if (saved) {
-      setClasses(JSON.parse(saved));
-    }
-    setHydrated(true);
-  }, []);
+    const loadData = async () => {
+      try {
+        const classesData = await getClasses();
+        setClasses(classesData);
+      } catch (error) {
+        console.error('Error loading classes:', error);
+        // Fallback to localStorage
+        const saved = localStorage.getItem("bb_classes");
+        if (saved) {
+          setClasses(JSON.parse(saved));
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  /* ---------- SAVE (after hydration only) ---------- */
-  useEffect(() => {
-    if (!hydrated) return;
-    localStorage.setItem("bb_classes", JSON.stringify(classes));
-  }, [classes, hydrated]);
+    loadData();
+  }, [getClasses]);
 
   /* ---------- ACTIONS ---------- */
 
-  const addClass = () => {
+  const addClass = async () => {
     const name = newClassName.trim();
     if (!name) return;
 
@@ -60,24 +61,41 @@ export default function ClassesPage() {
       return;
     }
 
-    setClasses((prev) => [
-      ...prev,
-      {
-        id: crypto.randomUUID(),
-        name,
-        color: selectedColor,
-      },
-    ]);
+    const newClass: DanceClass = {
+      id: crypto.randomUUID(),
+      name,
+      color: selectedColor,
+      synced: false,
+      updatedAt: new Date().toISOString(),
+    };
+
+    const updatedClasses = [...classes, newClass];
+    setClasses(updatedClasses);
+
+    try {
+      await saveClasses(updatedClasses);
+    } catch (error) {
+      console.error('Error saving class:', error);
+      // Class will be synced when connection is restored
+    }
 
     setNewClassName("");
     setSelectedColor(CLASS_COLORS[0]);
   };
 
-  const deleteClass = (id: string) => {
+  const deleteClass = async (id: string) => {
     const ok = confirm("Delete this class?\nThis cannot be undone.");
     if (!ok) return;
 
-    setClasses((prev) => prev.filter((c) => c.id !== id));
+    const updatedClasses = classes.filter((c) => c.id !== id);
+    setClasses(updatedClasses);
+
+    try {
+      await saveClasses(updatedClasses);
+    } catch (error) {
+      console.error('Error deleting class:', error);
+      // Deletion will be synced when connection is restored
+    }
   };
 
   /* ---------- UI ---------- */
