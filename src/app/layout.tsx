@@ -16,6 +16,9 @@ const inter = Inter({
 export const metadata = {
   title: "Bollywood Beatz",
   description: "Dance class attendance, points, and awards",
+  icons: {
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 export default function RootLayout({
