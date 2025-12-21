@@ -78,7 +78,7 @@ const TABLES = {
 
 // Sync manager class
 class SyncManager {
-  private isOnline = false;
+  isOnline = false;
   private syncInProgress = false;
 
   constructor() {
