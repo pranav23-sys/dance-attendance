@@ -12,7 +12,8 @@ CREATE TABLE classes (
   name TEXT NOT NULL,
   color TEXT NOT NULL,
   synced BOOLEAN DEFAULT true,
-  "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  deleted BOOLEAN DEFAULT false
 );
 
 -- Students table
@@ -23,7 +24,8 @@ CREATE TABLE students (
   "joinedAtISO" TEXT NOT NULL,
   archived BOOLEAN DEFAULT false,
   synced BOOLEAN DEFAULT true,
-  "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  deleted BOOLEAN DEFAULT false
 );
 
 -- Sessions table (attendance registers)
@@ -34,7 +36,8 @@ CREATE TABLE sessions (
   "closedAtISO" TEXT,
   marks JSONB DEFAULT '{}',
   synced BOOLEAN DEFAULT true,
-  "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  deleted BOOLEAN DEFAULT false
 );
 
 -- Points table (rewards/points system)
@@ -47,7 +50,8 @@ CREATE TABLE points (
   "createdAtISO" TEXT NOT NULL,
   "sessionId" TEXT,
   synced BOOLEAN DEFAULT true,
-  "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  deleted BOOLEAN DEFAULT false
 );
 
 -- Awards table (achievements)
@@ -56,12 +60,13 @@ CREATE TABLE awards (
   "awardId" TEXT NOT NULL,
   "studentId" TEXT NOT NULL,
   "classId" TEXT NOT NULL,
-  "periodType" TEXT NOT NULL CHECK ("periodType" IN ('MONTH', 'YEAR', 'CUSTOM')),
+  "periodType" TEXT NOT NULL CHECK ("periodType" IN ('RANGE', 'ACADEMIC_YEAR')),
   "periodKey" TEXT NOT NULL,
   "unlockedAtISO" TEXT NOT NULL,
   "decidedBy" TEXT NOT NULL CHECK ("decidedBy" IN ('SYSTEM', 'TEACHER')),
   synced BOOLEAN DEFAULT true,
-  "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  deleted BOOLEAN DEFAULT false
 );
 
 -- Indexes for better performance

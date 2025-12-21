@@ -87,7 +87,12 @@ export default function ClassesPage() {
     const ok = confirm("Delete this class?\nThis cannot be undone.");
     if (!ok) return;
 
-    const updatedClasses = classes.filter((c) => c.id !== id);
+    // Mark class as deleted instead of filtering it out
+    const updatedClasses = classes.map((c) =>
+      c.id === id
+        ? { ...c, deleted: true, synced: false, updatedAt: new Date().toISOString() }
+        : c
+    );
     setClasses(updatedClasses);
 
     try {

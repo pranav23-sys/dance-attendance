@@ -10,6 +10,7 @@ export interface DanceClass {
   color: string;
   synced?: boolean;
   updatedAt?: string;
+  deleted?: boolean;
 }
 
 export interface Student {
@@ -20,6 +21,7 @@ export interface Student {
   archived?: boolean;
   synced?: boolean;
   updatedAt?: string;
+  deleted?: boolean;
 }
 
 export interface RegisterSession {
@@ -30,6 +32,7 @@ export interface RegisterSession {
   marks: Record<string, "PRESENT" | "LATE" | "ABSENT" | "EXCUSED">;
   synced?: boolean;
   updatedAt?: string;
+  deleted?: boolean;
 }
 
 export interface PointEvent {
@@ -42,6 +45,7 @@ export interface PointEvent {
   sessionId?: string;
   synced?: boolean;
   updatedAt?: string;
+  deleted?: boolean;
 }
 
 export interface AwardUnlock {
@@ -55,6 +59,7 @@ export interface AwardUnlock {
   decidedBy: "SYSTEM" | "TEACHER";
   synced?: boolean;
   updatedAt?: string;
+  deleted?: boolean;
 }
 
 // Storage keys
@@ -99,7 +104,7 @@ class SyncManager {
   }
 
   // Generic data operations - offline-first
-  private async getFromSupabase<T>(table: string): Promise<T[] | null> {
+  private async getFromSupabase<T extends { deleted?: boolean }>(table: string): Promise<T[] | null> {
     if (!this.isOnline || !supabase) return null;
 
     try {
@@ -113,14 +118,15 @@ class SyncManager {
         return null;
       }
 
-      return data || [];
+      // Filter out deleted items
+      return (data || []).filter(item => !item.deleted);
     } catch (error) {
       console.error(`Network error fetching from ${table}:`, error);
       return null;
     }
   }
 
-  private async saveToSupabase<T extends { id: string; synced?: boolean; updatedAt?: string }>(
+  private async saveToSupabase<T extends { id: string; synced?: boolean; updatedAt?: string; deleted?: boolean }>(
     table: string,
     items: T[]
   ): Promise<void> {
@@ -151,12 +157,14 @@ class SyncManager {
     }
   }
 
-  private getFromLocalStorage<T>(key: string): T[] {
+  private getFromLocalStorage<T extends { deleted?: boolean }>(key: string): T[] {
     // Only access localStorage in browser environment
     if (typeof window === 'undefined') return [];
 
     try {
-      return JSON.parse(localStorage.getItem(key) || '[]');
+      const items = JSON.parse(localStorage.getItem(key) || '[]');
+      // Filter out deleted items
+      return items.filter((item: T) => !item.deleted);
     } catch {
       return [];
     }

@@ -110,7 +110,12 @@ export default function StudentsPage() {
   const deleteSession = async (id: string) => {
     if (!confirm("Delete this register? This cannot be undone.")) return;
 
-    const updatedSessions = sessions.filter((s) => s.id !== id);
+    // Mark session as deleted instead of filtering it out
+    const updatedSessions = sessions.map((s) =>
+      s.id === id
+        ? { ...s, deleted: true, synced: false, updatedAt: new Date().toISOString() }
+        : s
+    );
     setSessions(updatedSessions);
 
     try {
