@@ -100,7 +100,7 @@ class SyncManager {
 
   // Generic data operations - offline-first
   private async getFromSupabase<T>(table: string): Promise<T[] | null> {
-    if (!this.isOnline) return null;
+    if (!this.isOnline || !supabase) return null;
 
     try {
       const { data, error } = await supabase
@@ -124,7 +124,7 @@ class SyncManager {
     table: string,
     items: T[]
   ): Promise<void> {
-    if (!this.isOnline || items.length === 0) return;
+    if (!this.isOnline || !supabase || items.length === 0) return;
 
     try {
       const unsynced = items.filter(item => !item.synced);
