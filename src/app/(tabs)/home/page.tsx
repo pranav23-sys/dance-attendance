@@ -9,6 +9,7 @@ type Class = {
   id: string;
   name: string;
   color?: string;
+  deleted?: boolean;
 };
 
 type Student = {
