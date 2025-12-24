@@ -180,13 +180,13 @@ export default function StudentProfilePage() {
       } catch (error) {
         console.error('Error loading student data:', error);
         // Fallback to localStorage
-        setClasses(JSON.parse(localStorage.getItem(LS_CLASSES) || "[]").filter(c => !c.deleted));
+        setClasses(JSON.parse(localStorage.getItem(LS_CLASSES) || "[]").filter((c: DanceClass) => !c.deleted));
 
         const allStudents: Student[] = JSON.parse(localStorage.getItem(LS_STUDENTS) || "[]");
         setStudent(allStudents.find((s) => s.id === studentId && !s.deleted) || null);
 
-        setSessions(JSON.parse(localStorage.getItem(LS_SESSIONS) || "[]").filter(s => !s.deleted));
-        setPoints(JSON.parse(localStorage.getItem(LS_POINTS) || "[]").filter(p => !p.deleted));
+        setSessions(JSON.parse(localStorage.getItem(LS_SESSIONS) || "[]").filter((s: RegisterSession) => !s.deleted));
+        setPoints(JSON.parse(localStorage.getItem(LS_POINTS) || "[]").filter((p: PointEvent) => !p.deleted));
 
         const allAwards = loadAwards();
         setAwards(allAwards.filter((a) => a.studentId === studentId));
