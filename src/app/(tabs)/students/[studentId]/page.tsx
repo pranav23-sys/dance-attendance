@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { loadAwards } from "../../../../../lib/awards/awards.storage";
+import { useSyncData } from "../../../../../lib/sync-manager";
 
 type DanceClass = {
   id: string;
@@ -150,27 +151,52 @@ function polarToCartesian(cx: number, cy: number, r: number, angle: number) {
 export default function StudentProfilePage() {
   const { studentId } = useParams<{ studentId: string }>();
   const router = useRouter();
+  const { getClasses, getStudents, getSessions, getPoints } = useSyncData();
 
   const [student, setStudent] = useState<Student | null>(null);
   const [classes, setClasses] = useState<DanceClass[]>([]);
   const [sessions, setSessions] = useState<RegisterSession[]>([]);
   const [points, setPoints] = useState<PointEvent[]>([]);
   const [awards, setAwards] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setClasses(JSON.parse(localStorage.getItem(LS_CLASSES) || "[]"));
+    const loadData = async () => {
+      try {
+        const [classesData, studentsData, sessionsData, pointsData] = await Promise.all([
+          getClasses(),
+          getStudents(),
+          getSessions(),
+          getPoints(),
+        ]);
 
-    const allStudents: Student[] = JSON.parse(
-      localStorage.getItem(LS_STUDENTS) || "[]"
-    );
-    setStudent(allStudents.find((s) => s.id === studentId) || null);
+        setClasses(classesData.filter(c => !c.deleted));
+        setStudent(studentsData.find((s) => s.id === studentId && !s.deleted) || null);
+        setSessions(sessionsData.filter(s => !s.deleted));
+        setPoints(pointsData.filter(p => !p.deleted));
 
-    setSessions(JSON.parse(localStorage.getItem(LS_SESSIONS) || "[]"));
-    setPoints(JSON.parse(localStorage.getItem(LS_POINTS) || "[]"));
+        const allAwards = loadAwards();
+        setAwards(allAwards.filter((a) => a.studentId === studentId));
+      } catch (error) {
+        console.error('Error loading student data:', error);
+        // Fallback to localStorage
+        setClasses(JSON.parse(localStorage.getItem(LS_CLASSES) || "[]").filter(c => !c.deleted));
 
-    const allAwards = loadAwards();
-    setAwards(allAwards.filter((a) => a.studentId === studentId));
-  }, [studentId]);
+        const allStudents: Student[] = JSON.parse(localStorage.getItem(LS_STUDENTS) || "[]");
+        setStudent(allStudents.find((s) => s.id === studentId && !s.deleted) || null);
+
+        setSessions(JSON.parse(localStorage.getItem(LS_SESSIONS) || "[]").filter(s => !s.deleted));
+        setPoints(JSON.parse(localStorage.getItem(LS_POINTS) || "[]").filter(p => !p.deleted));
+
+        const allAwards = loadAwards();
+        setAwards(allAwards.filter((a) => a.studentId === studentId));
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, [studentId, getClasses, getStudents, getSessions, getPoints]);
 
   const cls = useMemo(
     () => classes.find((c) => c.id === student?.classId),
@@ -259,13 +285,35 @@ export default function StudentProfilePage() {
       </div>
 
       {/* STATS */}
-      <div className="rounded-2xl bg-neutral-900 ring-1 ring-neutral-800 p-5 mb-6 flex items-center gap-4">
-        <CircularPercent value={stats.percent} />
-        <div>
-          <p className="text-sm text-neutral-400">Attendance</p>
-          <p className="text-lg font-semibold">
-            {stats.attended} / {stats.possible}
-          </p>
+      <div className="grid grid-cols-2 gap-4 mb-6">
+        {/* Attendance Stats */}
+        <div className="rounded-2xl bg-neutral-900 ring-1 ring-neutral-800 p-5 flex items-center gap-4">
+          <CircularPercent value={stats.percent} />
+          <div>
+            <p className="text-sm text-neutral-400">Attendance</p>
+            <p className="text-lg font-semibold">
+              {stats.attended} / {stats.possible}
+            </p>
+          </div>
+        </div>
+
+        {/* Points Stats */}
+        <div className="rounded-2xl bg-neutral-900 ring-1 ring-neutral-800 p-5 flex items-center gap-4">
+          <div className="flex-shrink-0">
+            {pointStats ? (
+              <PieChart data={pointStats.byReason} />
+            ) : (
+              <div className="h-16 w-16 rounded-full flex items-center justify-center text-sm text-neutral-400">
+                Loading...
+              </div>
+            )}
+          </div>
+          <div>
+            <p className="text-sm text-neutral-400">Points</p>
+            <p className="text-lg font-semibold">
+              {pointStats?.total || 0} pts
+            </p>
+          </div>
         </div>
       </div>
 

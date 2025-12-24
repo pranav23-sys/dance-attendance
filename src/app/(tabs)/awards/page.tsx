@@ -230,7 +230,7 @@ export default function AwardsPage() {
   const classStudents = useMemo(() => {
     const list = students
       .filter((s) => s.classId === selectedClassId)
-      .filter((s) => !s.archived);
+      .filter((s) => !s.archived && !s.deleted);
     // stable sort by name for dropdowns
     return list.slice().sort((a, b) => a.name.localeCompare(b.name));
   }, [students, selectedClassId]);
