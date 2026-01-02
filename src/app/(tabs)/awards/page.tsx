@@ -866,7 +866,7 @@ const AwardsPage = memo(function AwardsPage() {
                 Not enough data yet. Need at least 4 non-excused marked sessions per student.
               </div>
             ) : (
-              mostImprovedInfo.top3.map((r: AwardCandidate, idx: number) => (
+              mostImprovedInfo.top3.map((r, idx: number) => (
                 <div key={r.student.id} className="flex items-center justify-between gap-3 rounded-xl bg-zinc-950 px-4 py-3 ring-1 ring-zinc-800">
                   <div className="min-w-0">
                     <div className="flex items-baseline gap-2">
@@ -930,7 +930,7 @@ const AwardsPage = memo(function AwardsPage() {
             ) : studentOfYearInfo.top3.length === 0 ? (
               <div className="rounded-xl bg-zinc-950 px-4 py-3 text-sm text-zinc-400 ring-1 ring-zinc-800">No suggestions yet (needs attendance marks/points this year).</div>
             ) : (
-              studentOfYearInfo.top3.map((r: AwardCandidate, idx: number) => (
+              studentOfYearInfo.top3.map((r, idx: number) => (
                 <div key={r.student.id} className="flex items-center justify-between gap-3 rounded-xl bg-zinc-950 px-4 py-3 ring-1 ring-zinc-800">
                   <div className="min-w-0">
                     <div className="flex items-baseline gap-2">

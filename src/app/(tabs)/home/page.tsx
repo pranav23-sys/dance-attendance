@@ -87,7 +87,7 @@ export default function HomePage() {
         // Fallback to localStorage if sync fails
         setClasses(JSON.parse(localStorage.getItem("bb_classes") || "[]"));
         setStudents(JSON.parse(localStorage.getItem("bb_students") || "[]"));
-        setSessions(JSON.parse(localStorage.getItem("bb_sessions") || "[]").filter(s => !s.deleted));
+        setSessions(JSON.parse(localStorage.getItem("bb_sessions") || "[]").filter((s: RegisterSession) => !s.deleted));
       } finally {
         setLoading(false);
       }

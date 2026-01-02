@@ -1,7 +1,7 @@
 // lib/awards/awards.evaluators.ts
 
 import type { Student, RegisterSession, PointEvent, AwardUnlock } from "../sync-manager";
-import type { AwardCandidate, AwardPeriodType } from "./awards.types";
+import type { AwardCandidate } from "./awards.types";
 
 
 // Helper function to mark attendance as attended
@@ -214,7 +214,7 @@ export function evaluateMostImproved(opts: {
 
   rows.sort((a, b) => {
     if (b.score !== a.score) return b.score - a.score;
-    if (b.sessionsUsed !== a.sessionsUsed) return b.sessionsUsed - a.sessionsUsed;
+    if ((b.sessionsUsed ?? 0) !== (a.sessionsUsed ?? 0)) return (b.sessionsUsed ?? 0) - (a.sessionsUsed ?? 0);
     return a.student.name.localeCompare(b.student.name);
   });
 
@@ -332,7 +332,7 @@ export function autoAward(opts: {
     ? `${opts.rangeFrom!.getFullYear()}-${String(opts.rangeFrom!.getMonth() + 1).padStart(2, "0")}`
     : getAcademicYearBounds(new Date()).key;
 
-  const periodType: AwardPeriodType = awardType === "student_of_month" ? "MONTH" : "YEAR";
+  const periodType = awardType === "student_of_month" ? "RANGE" : "ACADEMIC_YEAR";
 
   return {
     id: `auto_${awardType}_${classId}_${periodKey}_${Date.now()}`,

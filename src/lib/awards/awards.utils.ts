@@ -1,6 +1,6 @@
 // lib/awards/awards.utils.ts
 
-import type { AwardUnlock } from "./awards.types";
+import type { AwardUnlock } from "../sync-manager";
 
 /**
  * Check if an award already exists for the given criteria
@@ -53,12 +53,22 @@ export function getPeriodAwards(
  * Format award period for display
  */
 export function formatAwardPeriod(award: AwardUnlock): string {
-  if (award.periodType === "MONTH") {
-    // periodKey format: "2024-03"
-    const [year, month] = award.periodKey.split("-");
-    const date = new Date(parseInt(year), parseInt(month) - 1);
-    return date.toLocaleDateString(undefined, { year: "numeric", month: "long" });
-  } else if (award.periodType === "YEAR") {
+  if (award.periodType === "RANGE") {
+    // periodKey format: "2024-03-01T00:00:00.000Z|2024-03-31T23:59:59.999Z"
+    const [startISO, endISO] = award.periodKey.split("|");
+    if (startISO && endISO) {
+      const start = new Date(startISO);
+      const end = new Date(endISO);
+      const startMonth = start.toLocaleDateString(undefined, { month: "short" });
+      const endMonth = end.toLocaleDateString(undefined, { month: "short" });
+      const year = start.getFullYear();
+      if (startMonth === endMonth) {
+        return `${startMonth} ${year}`;
+      } else {
+        return `${startMonth} - ${endMonth} ${year}`;
+      }
+    }
+  } else if (award.periodType === "ACADEMIC_YEAR") {
     // periodKey format: "2023-2024"
     return `Academic Year ${award.periodKey}`;
   }
