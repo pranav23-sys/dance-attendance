@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSyncData } from "@/lib/sync-manager";
-import { useModal } from "../layout";
+import { useModal } from "@/contexts/ModalContext";
 import { useFormValidation, validationRules, sanitizeInput } from "@/lib/validation";
 import type { DanceClass } from "@/lib/sync-manager";
 

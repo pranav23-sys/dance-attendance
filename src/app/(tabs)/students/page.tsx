@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSyncData } from "@/lib/sync-manager";
-import { useModal } from "../layout";
+import { useModal } from "@/contexts/ModalContext";
 import { useFormValidation, validationRules, sanitizeInput } from "@/lib/validation";
 import type { DanceClass, Student, RegisterSession } from "@/lib/sync-manager";
 
@@ -77,7 +77,7 @@ export default function StudentsPage() {
         // Fallback to localStorage
         setClasses(JSON.parse(localStorage.getItem(LS_CLASSES) || "[]"));
         setStudents(JSON.parse(localStorage.getItem(LS_STUDENTS) || "[]"));
-        setSessions(JSON.parse(localStorage.getItem(LS_SESSIONS) || "[]").filter(s => !s.deleted));
+        setSessions(JSON.parse(localStorage.getItem(LS_SESSIONS) || "[]").filter((s: any) => !s.deleted));
       } finally {
         setLoading(false);
       }

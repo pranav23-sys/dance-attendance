@@ -135,6 +135,21 @@ body {
   color: oklch(0.6 0.15 240);
 }
 
+/* Future CSS - Network-aware features (not yet supported)
+@media (network-type: slow-2g), (network-type: 2g) {
+  /* Reduce animations on slow connections
+  *, *::before, *::after {
+    animation-duration: 0.1s !important;
+    transition-duration: 0.1s !important;
+  }
+
+  /* Simplify visual effects
+  .backdrop-blur {
+    backdrop-filter: none;
+  }
+}
+*/
+
 /* Battery-aware features (future CSS) */
 @supports (environment: battery-level) {
   @media (battery-level: low) {
