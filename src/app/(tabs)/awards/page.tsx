@@ -1,9 +1,40 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, memo } from "react";
 import { useRouter } from "next/navigation";
 import { useSyncData } from "@/lib/sync-manager";
 import type { DanceClass, Student, RegisterSession, PointEvent, AwardUnlock } from "@/lib/sync-manager";
+import type { AwardCandidate } from "../../../lib/awards/awards.types";
+
+// Loading Screen Component
+function LoadingScreen({ message = "Loading..." }: { message?: string }) {
+  return (
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col items-center justify-center">
+      <div className="text-center space-y-6">
+        {/* Animated icon */}
+        <div className="relative">
+          <div className="w-16 h-16 mx-auto bg-gradient-to-br from-orange-500 to-pink-500 rounded-xl flex items-center justify-center shadow-xl">
+            <span className="text-2xl animate-bounce">🏆</span>
+          </div>
+        </div>
+
+        {/* Loading text */}
+        <div className="space-y-2">
+          <h2 className="text-xl font-semibold text-zinc-200">Bollywood Beatz</h2>
+          <p className="text-zinc-400 animate-pulse">{message}</p>
+        </div>
+
+        {/* Loading dots */}
+        <div className="flex space-x-2 justify-center">
+          <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce"></div>
+          <div className="w-2 h-2 bg-pink-500 rounded-full animate-bounce delay-100"></div>
+          <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce delay-200"></div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 
 type Mark = "PRESENT" | "LATE" | "ABSENT" | "EXCUSED";
 type AwardId = "student_of_month" | "most_improved_year" | "student_of_year";
@@ -136,7 +167,7 @@ function pct(n01: number) {
   return `${round1(n01 * 100)}%`;
 }
 
-export default function AwardsPage() {
+const AwardsPage = memo(function AwardsPage() {
   const router = useRouter();
   const { getClasses, getStudents, getSessions, getPoints, getAwards, saveAwards } = useSyncData();
 
@@ -621,8 +652,12 @@ export default function AwardsPage() {
     return students.find((s) => s.id === id)?.name ?? "—";
   }, [sotmInfo.lastWinnerStudentId, students]);
 
+  if (loading) {
+    return <LoadingScreen message="Calculating awards..." />;
+  }
+
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100">
+    <div id="main-content" className="min-h-screen bg-zinc-950 text-zinc-100">
       <div className="mx-auto w-full max-w-md px-4 pb-24 pt-4">
         {/* Header */}
         <div className="mb-4 flex items-center gap-3">
@@ -831,7 +866,7 @@ export default function AwardsPage() {
                 Not enough data yet. Need at least 4 non-excused marked sessions per student.
               </div>
             ) : (
-              mostImprovedInfo.top3.map((r: any, idx: number) => (
+              mostImprovedInfo.top3.map((r: AwardCandidate, idx: number) => (
                 <div key={r.student.id} className="flex items-center justify-between gap-3 rounded-xl bg-zinc-950 px-4 py-3 ring-1 ring-zinc-800">
                   <div className="min-w-0">
                     <div className="flex items-baseline gap-2">
@@ -895,7 +930,7 @@ export default function AwardsPage() {
             ) : studentOfYearInfo.top3.length === 0 ? (
               <div className="rounded-xl bg-zinc-950 px-4 py-3 text-sm text-zinc-400 ring-1 ring-zinc-800">No suggestions yet (needs attendance marks/points this year).</div>
             ) : (
-              studentOfYearInfo.top3.map((r: any, idx: number) => (
+              studentOfYearInfo.top3.map((r: AwardCandidate, idx: number) => (
                 <div key={r.student.id} className="flex items-center justify-between gap-3 rounded-xl bg-zinc-950 px-4 py-3 ring-1 ring-zinc-800">
                   <div className="min-w-0">
                     <div className="flex items-baseline gap-2">
@@ -952,7 +987,8 @@ export default function AwardsPage() {
         <div className="rounded-2xl bg-zinc-900/60 p-4 text-sm text-zinc-400 ring-1 ring-zinc-800">
           <div className="font-semibold text-zinc-200">Notes</div>
           <ul className="mt-2 list-disc space-y-1 pl-5">
-            <li>No auto-awarding. Buttons only write to localStorage.</li>
+            <li>Automatic awards run when registers are closed.</li>
+            <li>Manual awarding available with override options.</li>
             <li>EXCUSED marks are ignored in attendance % and Most Improved.</li>
             <li>Attendance counts only sessions after join date (or sessions where a mark exists).</li>
           </ul>
@@ -969,4 +1005,8 @@ export default function AwardsPage() {
       ) : null}
     </div>
   );
-}
+});
+
+AwardsPage.displayName = "AwardsPage";
+
+export default AwardsPage;

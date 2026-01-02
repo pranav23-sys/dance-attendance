@@ -49,3 +49,301 @@ body {
 .animate-fade-in {
   animation: fade-in 0.15s ease-out;
 }
+
+@keyframes bounce-gentle {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+.animate-bounce-gentle {
+  animation: bounce-gentle 2s infinite;
+}
+
+/* 2026 Accessibility Standards */
+
+/* Sustainable Design - Reduced Motion & Battery Awareness */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .animate-pulse,
+  .animate-bounce,
+  .animate-bounce-gentle,
+  .animate-morph {
+    animation: none !important;
+  }
+}
+
+/* Sustainable Design - Data & Energy Awareness */
+@media (prefers-reduced-data: reduce) {
+  /* Reduce background images and heavy assets */
+  .heavy-background {
+    background: none;
+    background-color: var(--background);
+  }
+
+  /* Simplify animations */
+  .complex-animation {
+    animation: none;
+  }
+
+  /* Reduce image quality hints */
+  img {
+    image-rendering: pixelated;
+  }
+
+  /* Hide non-essential decorative elements */
+  .decorative-only {
+    display: none;
+  }
+
+  /* Simplify gradients */
+  .gradient-modern {
+    background: var(--color-accent);
+  }
+}
+
+/* Network-aware features (emerging) */
+@media (network-type: slow-2g), (network-type: 2g) {
+  /* Reduce animations on slow connections */
+  *, *::before, *::after {
+    animation-duration: 0.1s !important;
+    transition-duration: 0.1s !important;
+  }
+
+  /* Simplify visual effects */
+  .backdrop-blur {
+    backdrop-filter: none;
+  }
+}
+
+/* Energy-efficient design */
+.energy-efficient {
+  /* Use CSS containment for better performance */
+  contain: layout style paint;
+  /* Optimize for GPU acceleration */
+  will-change: transform;
+  /* Use efficient color spaces */
+  color: oklch(0.6 0.15 240);
+}
+
+/* Battery-aware features (future CSS) */
+@supports (environment: battery-level) {
+  @media (battery-level: low) {
+    /* Reduce animations on low battery */
+    *, *::before, *::after {
+      animation-duration: 0.1s !important;
+      transition-duration: 0.1s !important;
+    }
+
+    /* Simplify visual effects */
+    .blur-effect {
+      backdrop-filter: none;
+    }
+
+    .shadow-effect {
+      box-shadow: none;
+    }
+  }
+}
+
+/* Screen Reader Utilities */
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.sr-only:focus {
+  position: static !important;
+  width: auto !important;
+  height: auto !important;
+  padding: inherit !important;
+  margin: inherit !important;
+  overflow: visible !important;
+  clip: auto !important;
+  white-space: normal !important;
+}
+
+/* Focus Management */
+.focus-visible:focus-visible {
+  outline: 2px solid #ff8c1a;
+  outline-offset: 2px;
+}
+
+/* Skip Links */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 6px;
+  background: #ff8c1a;
+  color: black;
+  padding: 8px;
+  text-decoration: none;
+  border-radius: 4px;
+  z-index: 1000;
+  font-weight: 600;
+}
+
+.skip-link:focus {
+  top: 6px;
+}
+
+/* High Contrast Mode Support */
+@media (prefers-contrast: high) {
+  :root {
+    --color-accent: #ffff00; /* High contrast yellow */
+  }
+
+  button, input, select, textarea {
+    border: 2px solid currentColor;
+  }
+}
+
+/* Forced Colors (Windows High Contrast) */
+@media (forced-colors: active) {
+  :root {
+    --color-accent: Highlight;
+  }
+
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 1px;
+  }
+}
+
+/* 2026 Modern CSS Features */
+
+/* Container Queries - 2026 Standard */
+@container (min-width: 400px) {
+  .card-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@container (min-width: 600px) {
+  .card-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Aspect Ratio for consistent layouts */
+.aspect-video {
+  aspect-ratio: 16 / 9;
+}
+
+.aspect-square {
+  aspect-ratio: 1 / 1;
+}
+
+.aspect-card {
+  aspect-ratio: 4 / 3;
+}
+
+/* Content Visibility for performance */
+.content-visibility-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: 200px;
+}
+
+/* CSS Logical Properties for internationalization */
+.margin-inline {
+  margin-inline: 1rem;
+}
+
+.padding-block {
+  padding-block: 0.5rem;
+}
+
+/* Modern scrollbar styling */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* CSS Subgrid for advanced layouts */
+.grid-subgrid {
+  grid-template-columns: subgrid;
+}
+
+/* CSS Anchor Positioning (future) */
+.anchor-positioning {
+  position: absolute;
+  position-anchor: --anchor;
+}
+
+/* Modern focus styles with :has() support */
+.form-group:has(:invalid) {
+  border-color: #ef4444;
+}
+
+.form-group:has(:valid) {
+  border-color: #10b981;
+}
+
+/* Advanced color spaces and gradients */
+.gradient-modern {
+  background: linear-gradient(
+    135deg,
+    oklch(0.7 0.2 45) 0%,
+    oklch(0.8 0.15 200) 50%,
+    oklch(0.6 0.25 320) 100%
+  );
+}
+
+/* CSS Cascade Layers for better specificity control */
+@layer base, components, utilities;
+
+/* Masonry layout support */
+.masonry-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-rows: masonry;
+  gap: 1rem;
+}
+
+/* Advanced animation features */
+@keyframes morph {
+  0%, 100% { border-radius: 50%; }
+  25% { border-radius: 0; }
+  50% { border-radius: 25%; }
+  75% { border-radius: 50% 0; }
+}
+
+.animate-morph {
+  animation: morph 4s ease-in-out infinite;
+}

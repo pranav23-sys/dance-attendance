@@ -5,6 +5,35 @@ import { useRouter } from "next/navigation";
 import { useSyncData } from "@/lib/sync-manager";
 import type { RegisterSession } from "@/lib/sync-manager";
 
+// Loading Screen Component
+function LoadingScreen({ message = "Loading..." }: { message?: string }) {
+  return (
+    <main className="min-h-screen bg-black text-white flex flex-col items-center justify-center">
+      <div className="text-center space-y-6">
+        {/* Animated icon */}
+        <div className="relative">
+          <div className="w-16 h-16 mx-auto bg-gradient-to-br from-orange-500 to-pink-500 rounded-xl flex items-center justify-center shadow-xl">
+            <span className="text-2xl animate-bounce">💃</span>
+          </div>
+        </div>
+
+        {/* Loading text */}
+        <div className="space-y-2">
+          <h2 className="text-xl font-semibold text-neutral-200">Bollywood Beatz</h2>
+          <p className="text-neutral-400 animate-pulse">{message}</p>
+        </div>
+
+        {/* Loading dots */}
+        <div className="flex space-x-2 justify-center">
+          <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce"></div>
+          <div className="w-2 h-2 bg-pink-500 rounded-full animate-bounce delay-100"></div>
+          <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce delay-200"></div>
+        </div>
+      </div>
+    </main>
+  );
+}
+
 type Class = {
   id: string;
   name: string;
@@ -58,7 +87,7 @@ export default function HomePage() {
         // Fallback to localStorage if sync fails
         setClasses(JSON.parse(localStorage.getItem("bb_classes") || "[]"));
         setStudents(JSON.parse(localStorage.getItem("bb_students") || "[]"));
-        setSessions(JSON.parse(localStorage.getItem("bb_sessions") || "[]"));
+        setSessions(JSON.parse(localStorage.getItem("bb_sessions") || "[]").filter(s => !s.deleted));
       } finally {
         setLoading(false);
       }
@@ -142,8 +171,12 @@ export default function HomePage() {
     router.push(`/register/${cls.id}`);
   };
 
+  if (loading) {
+    return <LoadingScreen message="Loading your classes..." />;
+  }
+
   return (
-    <main className="min-h-screen bg-neutral-950 text-neutral-100 px-4 pt-6 pb-10 space-y-8">
+    <main id="main-content" className="min-h-screen bg-neutral-950 text-neutral-100 px-4 pt-6 pb-10 space-y-8">
       {/* Header */}
       <header className="space-y-1">
         <h1 className="text-3xl font-semibold tracking-tight">

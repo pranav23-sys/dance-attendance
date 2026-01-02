@@ -2,8 +2,37 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { loadAwards } from "../../../../../lib/awards/awards.storage";
+import { loadAwards } from "../../../../lib/awards/awards.storage";
 import { useSyncData } from "@/lib/sync-manager";
+
+// Loading Screen Component
+function LoadingScreen({ message = "Loading..." }: { message?: string }) {
+  return (
+    <main className="min-h-screen bg-black text-white flex flex-col items-center justify-center">
+      <div className="text-center space-y-6">
+        {/* Animated icon */}
+        <div className="relative">
+          <div className="w-16 h-16 mx-auto bg-gradient-to-br from-orange-500 to-pink-500 rounded-xl flex items-center justify-center shadow-xl">
+            <span className="text-2xl animate-bounce">👤</span>
+          </div>
+        </div>
+
+        {/* Loading text */}
+        <div className="space-y-2">
+          <h2 className="text-xl font-semibold text-neutral-200">Bollywood Beatz</h2>
+          <p className="text-neutral-400 animate-pulse">{message}</p>
+        </div>
+
+        {/* Loading dots */}
+        <div className="flex space-x-2 justify-center">
+          <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce"></div>
+          <div className="w-2 h-2 bg-pink-500 rounded-full animate-bounce delay-100"></div>
+          <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce delay-200"></div>
+        </div>
+      </div>
+    </main>
+  );
+}
 
 type DanceClass = {
   id: string;
@@ -261,11 +290,7 @@ export default function StudentProfilePage() {
   }, [points, student]);
 
   if (!student || !cls || !stats) {
-    return (
-      <main className="min-h-screen bg-black text-white flex items-center justify-center">
-        <p className="text-neutral-400">Loading student…</p>
-      </main>
-    );
+    return <LoadingScreen message="Loading student details..." />;
   }
 
   return (

@@ -21,6 +21,15 @@ export const metadata = {
   },
 };
 
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5, // Allow zoom for accessibility
+  minimumScale: 0.5,
+  userScalable: true, // Enable pinch-to-zoom for accessibility
+  viewportFit: 'cover', // Better mobile viewport handling
+};
+
 export default function RootLayout({
   children,
 }: {

@@ -16,6 +16,24 @@ export type AwardDefinition = {
   category: AwardCategory;
 };
 
+export type AwardCandidate = {
+  student: {
+    id: string;
+    name: string;
+    classId: string;
+    joinedAtISO: string;
+    archived?: boolean;
+    deleted?: boolean;
+  };
+  score: number;
+  attendancePct01: number;
+  pointsTotal: number;
+  slopePerDay?: number; // For Most Improved
+  sessionsUsed?: number; // For Most Improved
+  firstDateISO?: string; // For Most Improved
+  lastDateISO?: string; // For Most Improved
+};
+
 export type AwardUnlock = {
   id: string;
 
@@ -31,6 +49,11 @@ export type AwardUnlock = {
 
   // only for big awards
   decidedBy: "SYSTEM" | "TEACHER";
+
+  // Sync manager fields
+  synced?: boolean;
+  updatedAt?: string;
+  deleted?: boolean;
 };
 
 export {};

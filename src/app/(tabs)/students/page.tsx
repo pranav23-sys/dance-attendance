@@ -3,7 +3,38 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSyncData } from "@/lib/sync-manager";
+import { useModal } from "./layout";
+import { useFormValidation, validationRules, sanitizeInput } from "../../../lib/validation";
 import type { DanceClass, Student, RegisterSession } from "@/lib/sync-manager";
+
+// Loading Screen Component
+function LoadingScreen({ message = "Loading..." }: { message?: string }) {
+  return (
+    <main className="min-h-screen bg-black text-white flex flex-col items-center justify-center">
+      <div className="text-center space-y-6">
+        {/* Animated icon */}
+        <div className="relative">
+          <div className="w-16 h-16 mx-auto bg-gradient-to-br from-orange-500 to-pink-500 rounded-xl flex items-center justify-center shadow-xl">
+            <span className="text-2xl animate-bounce">👥</span>
+          </div>
+        </div>
+
+        {/* Loading text */}
+        <div className="space-y-2">
+          <h2 className="text-xl font-semibold text-neutral-200">Bollywood Beatz</h2>
+          <p className="text-neutral-400 animate-pulse">{message}</p>
+        </div>
+
+        {/* Loading dots */}
+        <div className="flex space-x-2 justify-center">
+          <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce"></div>
+          <div className="w-2 h-2 bg-pink-500 rounded-full animate-bounce delay-100"></div>
+          <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce delay-200"></div>
+        </div>
+      </div>
+    </main>
+  );
+}
 
 /* ---------- TYPES ---------- */
 type Status = "ABSENT" | "PRESENT" | "LATE" | "EXCUSED";
@@ -16,6 +47,7 @@ const LS_SESSIONS = "bb_sessions";
 export default function StudentsPage() {
   const router = useRouter();
   const { getClasses, getStudents, getSessions, saveStudents, saveSessions } = useSyncData();
+  const { showModal } = useModal();
 
   const [classes, setClasses] = useState<DanceClass[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
@@ -24,6 +56,8 @@ export default function StudentsPage() {
   const [newName, setNewName] = useState("");
   const [newClassId, setNewClassId] = useState("");
   const [loading, setLoading] = useState(true);
+
+  const { errors, validate, clearError, hasErrors } = useFormValidation();
 
   /* ---------- LOAD DATA ---------- */
   useEffect(() => {
@@ -43,7 +77,7 @@ export default function StudentsPage() {
         // Fallback to localStorage
         setClasses(JSON.parse(localStorage.getItem(LS_CLASSES) || "[]"));
         setStudents(JSON.parse(localStorage.getItem(LS_STUDENTS) || "[]"));
-        setSessions(JSON.parse(localStorage.getItem(LS_SESSIONS) || "[]"));
+        setSessions(JSON.parse(localStorage.getItem(LS_SESSIONS) || "[]").filter(s => !s.deleted));
       } finally {
         setLoading(false);
       }
@@ -54,11 +88,20 @@ export default function StudentsPage() {
 
   /* ---------- ACTIONS ---------- */
   const addStudent = async () => {
-    if (!newName.trim() || !newClassId) return;
+    const sanitizedName = sanitizeInput(newName);
+    const nameValid = validate("studentName", sanitizedName, validationRules.studentName);
+    const classValid = !!newClassId;
+
+    if (!nameValid || !classValid) {
+      if (!classValid) {
+        showModal("alert", "Validation Error", "Please select a class for the student.");
+      }
+      return;
+    }
 
     const newStudent: Student = {
       id: crypto.randomUUID(),
-      name: newName.trim(),
+      name: sanitizedName,
       classId: newClassId,
       joinedAtISO: new Date().toISOString(),
       synced: false,
@@ -70,11 +113,12 @@ export default function StudentsPage() {
 
     try {
       await saveStudents(updatedStudents);
+      setNewName("");
+      clearError("studentName");
     } catch (error) {
       console.error('Error saving student:', error);
+      showModal("alert", "Error", "Failed to save student. Please try again.");
     }
-
-    setNewName("");
   };
 
   const moveStudent = async (id: string, classId: string) => {
@@ -93,18 +137,23 @@ export default function StudentsPage() {
   };
 
   const archiveStudent = async (id: string) => {
-    if (!confirm("Archive this student?")) return;
+    showModal(
+      "confirm",
+      "Archive Student",
+      "Archive this student?",
+      async () => {
+        const updatedStudents = students.map((s) =>
+          s.id === id ? { ...s, archived: true, synced: false, updatedAt: new Date().toISOString() } : s
+        );
+        setStudents(updatedStudents);
 
-    const updatedStudents = students.map((s) =>
-      s.id === id ? { ...s, archived: true, synced: false, updatedAt: new Date().toISOString() } : s
+        try {
+          await saveStudents(updatedStudents);
+        } catch (error) {
+          console.error('Error archiving student:', error);
+        }
+      }
     );
-    setStudents(updatedStudents);
-
-    try {
-      await saveStudents(updatedStudents);
-    } catch (error) {
-      console.error('Error archiving student:', error);
-    }
   };
 
   const deleteSession = async (id: string) => {
@@ -139,8 +188,12 @@ export default function StudentsPage() {
   }, [sessions]);
 
   /* ---------- UI ---------- */
+  if (loading) {
+    return <LoadingScreen message="Loading students..." />;
+  }
+
   return (
-    <main className="min-h-screen bg-black text-white p-4 pb-28">
+    <main id="main-content" className="min-h-screen bg-black text-white p-4 pb-28">
       {/* HEADER */}
       <h1 className="text-3xl font-semibold mb-6 font-title text-[var(--color-accent)]">
         Students
@@ -148,12 +201,26 @@ export default function StudentsPage() {
 
       {/* ADD STUDENT */}
       <div className="rounded-2xl bg-neutral-900 ring-1 ring-neutral-800 p-5 mb-8 space-y-4">
-        <input
-          className="w-full rounded-xl bg-black/40 px-4 py-3 outline-none"
-          placeholder="Student name"
-          value={newName}
-          onChange={(e) => setNewName(e.target.value)}
-        />
+        <div>
+          <input
+            className={`w-full rounded-xl px-4 py-3 outline-none ${
+              errors.studentName ? "bg-red-900/40 ring-1 ring-red-500" : "bg-black/40"
+            }`}
+            placeholder="Student name"
+            value={newName}
+            onChange={(e) => {
+              const value = e.target.value;
+              setNewName(value);
+              if (errors.studentName) {
+                validate("studentName", sanitizeInput(value), validationRules.studentName);
+              }
+            }}
+            onBlur={(e) => validate("studentName", sanitizeInput(e.target.value), validationRules.studentName)}
+          />
+          {errors.studentName && (
+            <p className="mt-1 text-xs text-red-400">{errors.studentName}</p>
+          )}
+        </div>
 
         <select
           className="w-full rounded-xl bg-black/40 px-4 py-3"
@@ -262,9 +329,12 @@ export default function StudentsPage() {
                     onClick={(e) => {
                       e.stopPropagation();
                       const sessionTime = new Date(s.startedAtISO).toLocaleString();
-                      if (confirm(`Delete register from ${sessionTime}?\nThis cannot be undone.`)) {
-                        deleteSession(s.id);
-                      }
+                      showModal(
+                        "confirm",
+                        "Delete Register",
+                        `Delete register from ${sessionTime}? This cannot be undone.`,
+                        () => deleteSession(s.id)
+                      );
                     }}
                     className="text-red-400 px-3 py-2 min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-red-400/10 transition"
                   >

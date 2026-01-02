@@ -3,7 +3,38 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSyncData } from "@/lib/sync-manager";
+import { useModal } from "./layout";
+import { useFormValidation, validationRules, sanitizeInput } from "../../../lib/validation";
 import type { DanceClass } from "@/lib/sync-manager";
+
+// Loading Screen Component
+function LoadingScreen({ message = "Loading..." }: { message?: string }) {
+  return (
+    <main className="min-h-screen bg-black text-white flex flex-col items-center justify-center">
+      <div className="text-center space-y-6">
+        {/* Animated icon */}
+        <div className="relative">
+          <div className="w-16 h-16 mx-auto bg-gradient-to-br from-orange-500 to-pink-500 rounded-xl flex items-center justify-center shadow-xl">
+            <span className="text-2xl animate-bounce">📋</span>
+          </div>
+        </div>
+
+        {/* Loading text */}
+        <div className="space-y-2">
+          <h2 className="text-xl font-semibold text-neutral-200">Bollywood Beatz</h2>
+          <p className="text-neutral-400 animate-pulse">{message}</p>
+        </div>
+
+        {/* Loading dots */}
+        <div className="flex space-x-2 justify-center">
+          <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce"></div>
+          <div className="w-2 h-2 bg-pink-500 rounded-full animate-bounce delay-100"></div>
+          <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce delay-200"></div>
+        </div>
+      </div>
+    </main>
+  );
+}
 
 const CLASS_COLORS = [
   "#ff8c1a", // brand orange
@@ -19,11 +50,14 @@ const CLASS_COLORS = [
 export default function ClassesPage() {
   const router = useRouter();
   const { getClasses, saveClasses } = useSyncData();
+  const { showModal } = useModal();
 
   const [classes, setClasses] = useState<DanceClass[]>([]);
   const [newClassName, setNewClassName] = useState("");
   const [selectedColor, setSelectedColor] = useState(CLASS_COLORS[0]);
   const [loading, setLoading] = useState(true);
+
+  const { errors, validate, clearError, hasErrors } = useFormValidation();
 
   /* ---------- LOAD DATA ---------- */
   useEffect(() => {
@@ -49,21 +83,23 @@ export default function ClassesPage() {
   /* ---------- ACTIONS ---------- */
 
   const addClass = async () => {
-    const name = newClassName.trim();
-    if (!name) return;
+    const sanitizedName = sanitizeInput(newClassName);
+    const nameValid = validate("className", sanitizedName, validationRules.className);
+
+    if (!nameValid) return;
 
     const exists = classes.some(
-      (c) => c.name.toLowerCase() === name.toLowerCase()
+      (c) => c.name.toLowerCase() === sanitizedName.toLowerCase()
     );
 
     if (exists) {
-      alert("A class with this name already exists.");
+      showModal("alert", "Duplicate Class", "A class with this name already exists.");
       return;
     }
 
     const newClass: DanceClass = {
       id: crypto.randomUUID(),
-      name,
+      name: sanitizedName,
       color: selectedColor,
       synced: false,
       updatedAt: new Date().toISOString(),
@@ -74,13 +110,13 @@ export default function ClassesPage() {
 
     try {
       await saveClasses(updatedClasses);
+      setNewClassName("");
+      setSelectedColor(CLASS_COLORS[0]);
+      clearError("className");
     } catch (error) {
       console.error('Error saving class:', error);
-      // Class will be synced when connection is restored
+      showModal("alert", "Error", "Failed to save class. Please try again.");
     }
-
-    setNewClassName("");
-    setSelectedColor(CLASS_COLORS[0]);
   };
 
   const deleteClass = async (id: string) => {
@@ -107,8 +143,12 @@ export default function ClassesPage() {
 
   /* ---------- UI ---------- */
 
+  if (loading) {
+    return <LoadingScreen message="Loading classes..." />;
+  }
+
   return (
-    <main className="min-h-screen bg-black text-white p-4">
+    <main id="main-content" className="min-h-screen bg-black text-white p-4">
       {/* Title */}
       <h1 className="text-3xl font-semibold mb-6 tracking-wide text-[var(--color-accent)] font-title">
         Classes
@@ -117,12 +157,26 @@ export default function ClassesPage() {
       {/* Add class */}
       <div className="mb-6 space-y-3">
         <div className="flex gap-2">
-          <input
-            className="flex-1 rounded-lg bg-neutral-900 px-3 py-2 outline-none"
-            placeholder="New class name"
-            value={newClassName}
-            onChange={(e) => setNewClassName(e.target.value)}
-          />
+          <div className="flex-1">
+            <input
+              className={`w-full rounded-lg px-3 py-2 outline-none ${
+                errors.className ? "bg-red-900 ring-1 ring-red-500" : "bg-neutral-900"
+              }`}
+              placeholder="New class name"
+              value={newClassName}
+              onChange={(e) => {
+                const value = e.target.value;
+                setNewClassName(value);
+                if (errors.className) {
+                  validate("className", sanitizeInput(value), validationRules.className);
+                }
+              }}
+              onBlur={(e) => validate("className", sanitizeInput(newClassName), validationRules.className)}
+            />
+            {errors.className && (
+              <p className="mt-1 text-xs text-red-400">{errors.className}</p>
+            )}
+          </div>
           <button
             onClick={addClass}
             className="rounded-lg bg-[var(--color-accent)] text-black px-4 font-medium"
@@ -182,9 +236,12 @@ export default function ClassesPage() {
   <button
     onClick={(e) => {
       e.stopPropagation();
-      if (confirm(`Delete "${c.name}" class?\nThis cannot be undone.`)) {
-        deleteClass(c.id);
-      }
+      showModal(
+        "confirm",
+        "Delete Class",
+        `Delete "${c.name}" class? This cannot be undone.`,
+        () => deleteClass(c.id)
+      );
     }}
     className="absolute top-3 right-3 text-neutral-400 hover:text-red-400 transition p-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
     aria-label="Delete class"

@@ -6,6 +6,38 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { createPortal } from "react-dom";
 import { useSyncData } from "@/lib/sync-manager";
 import type { DanceClass, Student, RegisterSession, PointEvent } from "@/lib/sync-manager";
+import { runAwardsOnRegisterClose } from "../../../../../lib/awards/runMonthlyAwards.server";
+import { useModal } from "../../layout";
+import { useHaptics } from "../../../../hooks/useGestures";
+
+// Loading Screen Component
+function LoadingScreen({ message = "Loading..." }: { message?: string }) {
+  return (
+    <main className="min-h-screen bg-black text-white flex flex-col items-center justify-center">
+      <div className="text-center space-y-6">
+        {/* Animated icon */}
+        <div className="relative">
+          <div className="w-16 h-16 mx-auto bg-gradient-to-br from-orange-500 to-pink-500 rounded-xl flex items-center justify-center shadow-xl">
+            <span className="text-2xl animate-bounce">📝</span>
+          </div>
+        </div>
+
+        {/* Loading text */}
+        <div className="space-y-2">
+          <h2 className="text-xl font-semibold text-neutral-200">Bollywood Beatz</h2>
+          <p className="text-neutral-400 animate-pulse">{message}</p>
+        </div>
+
+        {/* Loading dots */}
+        <div className="flex space-x-2 justify-center">
+          <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce"></div>
+          <div className="w-2 h-2 bg-pink-500 rounded-full animate-bounce delay-100"></div>
+          <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce delay-200"></div>
+        </div>
+      </div>
+    </main>
+  );
+}
 
 
 
@@ -98,7 +130,9 @@ export default function RegisterPage() {
   const { classId } = useParams<{ classId: string }>();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { getClasses, getStudents, getSessions, getPoints, saveSessions, savePoints } = useSyncData();
+  const { getClasses, getStudents, getSessions, getPoints, saveSessions, savePoints, getAwards, saveAwards } = useSyncData();
+  const { showModal } = useModal();
+  const { success, error: hapticError, light } = useHaptics();
   const sessionFromQuery = searchParams.get("session"); // 👈 ?session=...
 
   const [hydrated, setHydrated] = useState(false);
@@ -171,13 +205,14 @@ export default function RegisterPage() {
     const savedSessions = localStorage.getItem(LS_SESSIONS);
     if (savedSessions) {
       const all: RegisterSession[] = JSON.parse(savedSessions);
-      setSessions(all.filter((x) => x.classId === classId));
+      setSessions(all.filter((x) => x.classId === classId && !x.deleted));
     } else {
       setSessions([]);
     }
 
     const savedPoints = localStorage.getItem(LS_POINTS);
-    setPoints(savedPoints ? JSON.parse(savedPoints) : []);
+    const allPoints: PointEvent[] = savedPoints ? JSON.parse(savedPoints) : [];
+    setPoints(allPoints.filter((p) => p.classId === classId && !p.deleted));
 
     setHydrated(true);
   }, [classId]);
@@ -191,8 +226,12 @@ export default function RegisterPage() {
   // ------- SAVE points (after hydration only) -------
   useEffect(() => {
     if (!hydrated) return;
-    localStorage.setItem(LS_POINTS, JSON.stringify(points));
-  }, [points, hydrated]);
+
+    // Save points through sync manager (handles local + external storage)
+    savePoints(points).catch((error) => {
+      console.error('Error saving points:', error);
+    });
+  }, [points, hydrated, savePoints]);
 
   // ------- SAVE sessions (after hydration only) -------
   useEffect(() => {
@@ -229,7 +268,10 @@ export default function RegisterPage() {
     // Create first session for today
     const id = crypto.randomUUID();
     const marks: Record<string, Status> = {};
-    
+
+    // Initialize with all visible students as ABSENT
+    const currentVisibleStudents = students.filter((st) => !st.archived);
+    currentVisibleStudents.forEach((st) => (marks[st.id] = "ABSENT"));
 
     const newSession: RegisterSession = {
       id,
@@ -260,8 +302,8 @@ export default function RegisterPage() {
       if (joinedAt > sessionStart) continue;
 
       if (!(st.id in marks)) {
-        
-        
+        marks[st.id] = "ABSENT";
+        changed = true;
       }
     }
 
@@ -274,13 +316,13 @@ export default function RegisterPage() {
 
   const createNextRegisterToday = () => {
     if (!activeSession || !activeSession.closedAtISO) {
-      alert("You must close the current register first.");
+      showModal("alert", "Close Register First", "You must close the current register first.");
       return;
     }
 
     const id = crypto.randomUUID();
     const marks: Record<string, Status> = {};
-    students.forEach((st) => (marks[st.id] = "ABSENT"));
+    visibleStudents.forEach((st) => (marks[st.id] = "ABSENT"));
 
     const newSession: RegisterSession = {
       id,
@@ -313,6 +355,7 @@ export default function RegisterPage() {
     if (student) {
       setToast({ studentName: student.name, reason, points: value });
       setTimeout(() => setToast(null), 1200);
+      success(); // Haptic feedback for points awarded
     }
   };
 
@@ -344,6 +387,9 @@ export default function RegisterPage() {
     // Auto on-time +1 when you mark PRESENT
     if (status === "PRESENT" && prevStatus !== "PRESENT") {
       giveOnTimeOnce(studentId);
+      success(); // Haptic feedback for successful attendance
+    } else {
+      light(); // Light feedback for status changes
     }
   };
   const pickRandomPresentOrLate = () => {
@@ -355,7 +401,7 @@ export default function RegisterPage() {
   });
 
   if (eligible.length === 0) {
-    alert("No students marked Present or Late yet 👀");
+    showModal("alert", "No Eligible Students", "No students marked Present or Late yet 👀");
     return;
   }
 
@@ -430,18 +476,14 @@ export default function RegisterPage() {
     );
 
   if (!danceClass || !activeSession) {
-    return (
-      <main className="min-h-screen bg-black text-white flex items-center justify-center">
-        <p className="text-neutral-400">Loading register…</p>
-      </main>
-    );
+    return <LoadingScreen message="Loading attendance register..." />;
   }
 
   return (
     <>
       {toastUI}
 
-      <main className="min-h-screen bg-black text-white p-4 pb-24">
+      <main id="main-content" className="min-h-screen bg-black text-white p-4 pb-24">
         {/* Header */}
         <div className="flex items-center gap-3 mb-4">
           <button onClick={async () => router.back()} className="text-neutral-300 text-xl" type="button">
@@ -463,6 +505,22 @@ export default function RegisterPage() {
             <span className="text-neutral-400">{new Date(activeSession.startedAtISO).toLocaleString()}</span>
           </div>
         )}
+
+        {/* Points Key */}
+        <div className="rounded-2xl bg-neutral-900/50 ring-1 ring-neutral-800 p-4 mb-4 container">
+          <p className="text-sm text-neutral-300 font-medium mb-3">Points System</p>
+          <div className="grid grid-cols-2 gap-3 card-grid">
+            {POINT_PRESETS.map((preset) => (
+              <div key={preset.id} className="flex items-center gap-2 text-sm">
+                <span className="text-lg">{preset.icon}</span>
+                <div className="min-w-0">
+                  <p className="text-neutral-200 text-xs truncate">{preset.label}</p>
+                  <p className="text-emerald-400 text-xs font-medium">+{preset.points} pts</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
 
         {/* Session controls */}
         <div className="rounded-2xl bg-neutral-900 ring-1 ring-neutral-800 p-4 mb-4">
@@ -527,7 +585,7 @@ export default function RegisterPage() {
             <p className="text-neutral-500 text-sm mt-1">Add students from the Students tab (next step).</p>
           </div>
         ) : (
-          <div className="grid gap-3">
+          <div className="grid gap-3 content-visibility-auto">
             {visibleStudents
               .slice()
               .sort((a, b) => a.name.localeCompare(b.name))
@@ -664,42 +722,66 @@ export default function RegisterPage() {
               disabled={isRegisterClosed}
               onClick={async () => {
   const closedAt = new Date().toISOString();
-// ✅ Fill missing attendance as ABSENT before closing
-const filledMarks = { ...activeSession.marks };
+  // ✅ Fill missing attendance as ABSENT before closing
+  const filledMarks = { ...activeSession.marks };
 
-visibleStudents.forEach((st) => {
-  if (!(st.id in filledMarks)) {
-    filledMarks[st.id] = "ABSENT";
-  }
-});
-
-
+  visibleStudents.forEach((st) => {
+    if (!(st.id in filledMarks)) {
+      filledMarks[st.id] = "ABSENT";
+    }
+  });
 
   // 1️⃣ Close the register
   setSessions((prev) =>
-  prev.map((s) =>
-    s.id === activeSession.id
-      ? { ...s, marks: filledMarks, closedAtISO: closedAt }
-      : s
-  )
-);
-
-
-  // 2️⃣ Load fresh data (awards logic needs full context)
-  const allStudents = JSON.parse(
-    localStorage.getItem("bb_students") || "[]"
+    prev.map((s) =>
+      s.id === activeSession.id
+        ? { ...s, marks: filledMarks, closedAtISO: closedAt }
+        : s
+    )
   );
 
-  const allSessions = JSON.parse(
-    localStorage.getItem("bb_sessions") || "[]"
-  );
+  // 2️⃣ Run automatic awards for this register close
+  try {
+    // Get fresh data for awards calculation
+    const [allStudents, allSessions, allPoints, existingAwards] = await Promise.all([
+      getStudents(),
+      getSessions(),
+      getPoints(),
+      getAwards(),
+    ]);
 
-  const allPoints = JSON.parse(
-    localStorage.getItem("bb_points") || "[]"
-  );
+    // Run awards logic
+    const newAwards = runAwardsOnRegisterClose({
+      classId,
+      students: allStudents,
+      sessions: allSessions,
+      points: allPoints,
+      existingAwards,
+    });
 
- 
+    // Save any new awards
+    if (newAwards.length > 0) {
+      const updatedAwards = [...existingAwards, ...newAwards];
+      await saveAwards(updatedAwards);
 
+      // Show notification about awarded achievements
+      const awardNames = newAwards.map(award => {
+        switch (award.awardId) {
+          case "student_of_month": return "Student of the Month";
+          case "most_improved_year": return "Most Improved";
+          case "student_of_year": return "Student of the Year";
+          default: return award.awardId;
+        }
+      });
+
+      console.log(`🏆 Awarded: ${awardNames.join(", ")}`);
+    }
+  } catch (error) {
+    console.error('Error running automatic awards:', error);
+    // Don't block register closing if awards fail
+  }
+
+  // Register closed successfully
 }}
 
               className={[
