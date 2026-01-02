@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSyncData } from "@/lib/sync-manager";
-import { useModal } from "./layout";
-import { useFormValidation, validationRules, sanitizeInput } from "../../../lib/validation";
+import { useModal } from "../layout";
+import { useFormValidation, validationRules, sanitizeInput } from "@/lib/validation";
 import type { DanceClass } from "@/lib/sync-manager";
 
 // Loading Screen Component

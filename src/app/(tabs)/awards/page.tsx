@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState, memo } from "react";
 import { useRouter } from "next/navigation";
 import { useSyncData } from "@/lib/sync-manager";
 import type { DanceClass, Student, RegisterSession, PointEvent, AwardUnlock } from "@/lib/sync-manager";
-import type { AwardCandidate } from "../../../lib/awards/awards.types";
+import type { AwardCandidate } from "@/lib/awards/awards.types";
 
 // Loading Screen Component
 function LoadingScreen({ message = "Loading..." }: { message?: string }) {

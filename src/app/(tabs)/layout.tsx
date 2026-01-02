@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import ErrorBoundary from "../../components/ErrorBoundary";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 const tabs = [
   { href: "/home", label: "Home", icon: "🏠" },

@@ -6,9 +6,9 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { createPortal } from "react-dom";
 import { useSyncData } from "@/lib/sync-manager";
 import type { DanceClass, Student, RegisterSession, PointEvent } from "@/lib/sync-manager";
-import { runAwardsOnRegisterClose } from "../../../../../lib/awards/runMonthlyAwards.server";
-import { useModal } from "../../layout";
-import { useHaptics } from "../../../../hooks/useGestures";
+import { runAwardsOnRegisterClose } from "@/lib/awards/runMonthlyAwards.server";
+import { useModal } from "../layout";
+import { useHaptics } from "@/hooks/useGestures";
 
 // Loading Screen Component
 function LoadingScreen({ message = "Loading..." }: { message?: string }) {

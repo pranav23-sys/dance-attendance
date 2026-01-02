@@ -32,7 +32,7 @@ function LoadingScreen({ message = "Loading..." }: { message?: string }) {
     </main>
   );
 }
-import { loadAwards } from "../../../../lib/awards/awards.storage";
+import { loadAwards } from "@/lib/awards/awards.storage";
 
 /* ---------- TYPES ---------- */
 type DanceClass = {

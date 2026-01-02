@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { loadAwards } from "../../../../lib/awards/awards.storage";
+import { loadAwards } from "@/lib/awards/awards.storage";
 import { useSyncData } from "@/lib/sync-manager";
 
 // Loading Screen Component
