@@ -1,7 +1,7 @@
 // Offline-first sync manager for dance attendance app
 // Stores data in localStorage first, syncs to Supabase when available
 
-import { supabase } from "../../lib/supabase";
+import { supabase } from "./supabase";
 
 // Types for our data models
 export interface DanceClass {

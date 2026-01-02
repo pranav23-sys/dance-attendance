@@ -1,7 +1,7 @@
 // Legacy pull functions - now handled by sync-manager.ts
 // These functions are kept for backward compatibility during migration
 
-import { syncManager } from "../src/lib/sync-manager";
+import { syncManager } from "./sync-manager";
 
 export async function pullPoints() {
   // Use the new sync manager to sync from cloud
