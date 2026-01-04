@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useSyncData } from "@/lib/sync-manager";
 import { useModal } from "@/contexts/ModalContext";
 import { useFormValidation, validationRules, sanitizeInput } from "@/lib/validation";
-import type { DanceClass, Student, RegisterSession } from "@/lib/sync-manager";
+import type { DanceClass, Student, RegisterSession, PointEvent } from "@/lib/sync-manager";
 
 // Loading Screen Component
 function LoadingScreen({ message = "Loading..." }: { message?: string }) {
@@ -61,6 +61,10 @@ export default function StudentsPage() {
   const [newName, setNewName] = useState("");
   const [newClassId, setNewClassId] = useState("");
   const [loading, setLoading] = useState(true);
+
+  // Filter and search state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [classFilter, setClassFilter] = useState("");
 
   const { errors, validate, clearError, hasErrors } = useFormValidation();
 
@@ -216,6 +220,37 @@ export default function StudentsPage() {
     return map;
   }, [sessions]);
 
+  // Filtered and sorted students
+  const filteredStudents = useMemo(() => {
+    let filtered = students.filter((s) => !s.archived && !s.deleted);
+
+    // Apply class filter
+    if (classFilter) {
+      filtered = filtered.filter((s) => s.classId === classFilter);
+    }
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      filtered = filtered.filter((s) =>
+        s.name.toLowerCase().includes(query)
+      );
+    }
+
+    // Sort by class name alphabetically, then by student name
+    return filtered.sort((a, b) => {
+      const classA = classes.find((c) => c.id === a.classId)?.name || '';
+      const classB = classes.find((c) => c.id === b.classId)?.name || '';
+
+      // First sort by class name
+      const classCompare = classA.localeCompare(classB);
+      if (classCompare !== 0) return classCompare;
+
+      // Then sort by student name
+      return a.name.localeCompare(b.name);
+    });
+  }, [students, classes, classFilter, searchQuery]);
+
   /* ---------- UI ---------- */
   if (loading) {
     return <LoadingScreen message="Loading students..." />;
@@ -272,61 +307,108 @@ export default function StudentsPage() {
         </button>
       </div>
 
+      {/* FILTERS AND SEARCH */}
+      <div className="rounded-2xl bg-neutral-900 ring-1 ring-neutral-800 p-5 mb-6 space-y-4">
+        <h3 className="text-sm font-medium text-neutral-300">Filter & Search</h3>
+
+        <div className="grid grid-cols-1 gap-3">
+          {/* Search Input */}
+          <div>
+            <input
+              type="text"
+              placeholder="Search students..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full rounded-xl bg-black/40 px-4 py-3 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50"
+            />
+          </div>
+
+          {/* Class Filter */}
+          <select
+            value={classFilter}
+            onChange={(e) => setClassFilter(e.target.value)}
+            className="w-full rounded-xl bg-black/40 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-500/50"
+          >
+            <option value="">All classes</option>
+            {classes
+              .filter(c => !c.deleted)
+              .sort((a, b) => a.name.localeCompare(b.name))
+              .map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+          </select>
+        </div>
+
+        {/* Results count */}
+        <div className="text-xs text-neutral-400">
+          Showing {filteredStudents.length} of {students.filter((s) => !s.archived && !s.deleted).length} students
+        </div>
+      </div>
+
       {/* STUDENTS LIST */}
       <div className="space-y-4">
-        {students.filter((s) => !s.archived && !s.deleted).map((s) => {
-          const cls = classes.find((c) => c.id === s.classId);
+        {filteredStudents.length === 0 ? (
+          <div className="rounded-2xl bg-neutral-900 ring-1 ring-neutral-800 p-8 text-center">
+            <p className="text-neutral-400">
+              {searchQuery || classFilter ? 'No students match your filters.' : 'No students yet.'}
+            </p>
+          </div>
+        ) : (
+          filteredStudents.map((s) => {
+            const cls = classes.find((c) => c.id === s.classId);
 
-          return (
-            <div
-              key={s.id}
-              className="rounded-2xl bg-neutral-900 ring-1 ring-neutral-800 p-5"
-            >
-              {/* CLICKABLE PROFILE AREA */}
+            return (
               <div
-                onClick={() => router.push(`/students/${s.id}`)}
-                className="cursor-pointer active:scale-[0.98] transition"
+                key={s.id}
+                className="rounded-2xl bg-neutral-900 ring-1 ring-neutral-800 p-5"
               >
-                {cls && (
-                  <div
-                    className="absolute left-0 top-0 h-full w-1.5 rounded-l-2xl"
-                    style={{ backgroundColor: cls.color }}
-                  />
-                )}
-
-                <p className="font-semibold text-lg">{s.name}</p>
-                <p className="text-sm text-neutral-400">
-                  {cls?.name ?? "No class"}
-                </p>
-              </div>
-
-              {/* ACTIONS */}
-              <div className="mt-4 flex gap-2">
-                <select
-                  className="flex-1 rounded-xl bg-black/40 px-4 py-2 text-sm"
-                  value={s.classId}
-                  onChange={(e) => moveStudent(s.id, e.target.value)}
+                {/* CLICKABLE PROFILE AREA */}
+                <div
+                  onClick={() => router.push(`/students/${s.id}`)}
+                  className="cursor-pointer active:scale-[0.98] transition"
                 >
-                  {classes.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      Move to {c.name}
-                    </option>
-                  ))}
-                </select>
+                  {cls && (
+                    <div
+                      className="absolute left-0 top-0 h-full w-1.5 rounded-l-2xl"
+                      style={{ backgroundColor: cls.color }}
+                    />
+                  )}
 
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    archiveStudent(s.id);
-                  }}
-                  className="text-xs text-neutral-400 hover:text-red-400 px-3 py-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
-                >
-                  Archive
-                </button>
+                  <p className="font-semibold text-lg">{s.name}</p>
+                  <p className="text-sm text-neutral-400">
+                    {cls?.name ?? "No class"}
+                  </p>
+                </div>
+
+                {/* ACTIONS */}
+                <div className="mt-4 flex gap-2">
+                  <select
+                    className="flex-1 rounded-xl bg-black/40 px-4 py-2 text-sm"
+                    value={s.classId}
+                    onChange={(e) => moveStudent(s.id, e.target.value)}
+                  >
+                    {classes.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        Move to {c.name}
+                      </option>
+                    ))}
+                  </select>
+
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      archiveStudent(s.id);
+                    }}
+                    className="text-xs text-neutral-400 hover:text-red-400 px-3 py-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
+                  >
+                    Archive
+                  </button>
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
       </div>
 
       {/* REGISTERS ADMIN */}
