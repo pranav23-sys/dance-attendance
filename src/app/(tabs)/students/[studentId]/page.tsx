@@ -12,8 +12,12 @@ function LoadingScreen({ message = "Loading..." }: { message?: string }) {
       <div className="text-center space-y-6">
         {/* Animated icon */}
         <div className="relative">
-          <div className="w-16 h-16 mx-auto bg-gradient-to-br from-orange-500 to-pink-500 rounded-xl flex items-center justify-center shadow-xl">
-            <span className="text-2xl animate-bounce">👤</span>
+          <div className="w-16 h-16 mx-auto bg-gradient-to-br from-orange-500 to-pink-500 rounded-xl flex items-center justify-center shadow-xl overflow-hidden">
+            <img
+              src="/icon-512.png"
+              alt="Bollywood Beatz Logo"
+              className="w-full h-full object-contain animate-bounce"
+            />
           </div>
         </div>
 
@@ -304,7 +308,7 @@ export default function StudentProfilePage() {
           <h1 className="text-2xl font-semibold">{student.name}</h1>
           <p className="text-sm text-neutral-400">
             {cls.name} • Joined{" "}
-            {new Date(student.joinedAtISO).toLocaleDateString()}
+            {new Date(student.joinedAtISO).toLocaleDateString('en-GB')}
           </p>
         </div>
       </div>
@@ -356,7 +360,7 @@ export default function StudentProfilePage() {
                   {a.awardId.replace(/_/g, " ")}
                 </p>
                 <p className="text-xs text-neutral-400">
-                  Earned {new Date(a.unlockedAtISO).toLocaleDateString()}
+                  Earned {new Date(a.unlockedAtISO).toLocaleDateString('en-GB')}
                 </p>
               </div>
             ))}
@@ -399,7 +403,7 @@ export default function StudentProfilePage() {
             >
               <div>
                 <p className="text-sm">
-                  {new Date(s.startedAtISO).toLocaleString()}
+                  {new Date(s.startedAtISO).toLocaleString('en-GB')}
                 </p>
                 <p className={`text-xs font-semibold ${statusColor(mark)}`}>
                   {mark}

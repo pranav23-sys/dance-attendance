@@ -230,8 +230,23 @@ class SyncManager {
   }
 
   async saveClasses(classes: DanceClass[]): Promise<void> {
-    // Save to local storage immediately (offline-first)
-    const classesWithTimestamps = classes.map(cls => ({
+    // Merge with existing local data to avoid overwriting other data
+    const existingData = this.getFromLocalStorage<DanceClass>(STORAGE_KEYS.classes);
+    const mergedMap = new Map<string, DanceClass>();
+
+    // Add all existing data first
+    existingData.forEach(cls => {
+      mergedMap.set(cls.id, cls);
+    });
+
+    // Override with the classes being saved (they take precedence)
+    classes.forEach(cls => {
+      mergedMap.set(cls.id, cls);
+    });
+
+    const mergedData = Array.from(mergedMap.values());
+
+    const classesWithTimestamps = mergedData.map(cls => ({
       ...cls,
       synced: false,
       updatedAt: new Date().toISOString(),
@@ -274,8 +289,23 @@ class SyncManager {
   }
 
   async saveStudents(students: Student[]): Promise<void> {
-    // Save to local storage immediately (offline-first)
-    const studentsWithTimestamps = students.map(student => ({
+    // Merge with existing local data to avoid overwriting other data
+    const existingData = this.getFromLocalStorage<Student>(STORAGE_KEYS.students);
+    const mergedMap = new Map<string, Student>();
+
+    // Add all existing data first
+    existingData.forEach(student => {
+      mergedMap.set(student.id, student);
+    });
+
+    // Override with the students being saved (they take precedence)
+    students.forEach(student => {
+      mergedMap.set(student.id, student);
+    });
+
+    const mergedData = Array.from(mergedMap.values());
+
+    const studentsWithTimestamps = mergedData.map(student => ({
       ...student,
       synced: false,
       updatedAt: new Date().toISOString(),
@@ -314,7 +344,23 @@ class SyncManager {
   }
 
   async saveSessions(sessions: RegisterSession[]): Promise<void> {
-    const sessionsWithTimestamps = sessions.map(session => ({
+    // Merge with existing local data to avoid overwriting other data
+    const existingData = this.getFromLocalStorage<RegisterSession>(STORAGE_KEYS.sessions);
+    const mergedMap = new Map<string, RegisterSession>();
+
+    // Add all existing data first
+    existingData.forEach(session => {
+      mergedMap.set(session.id, session);
+    });
+
+    // Override with the sessions being saved (they take precedence)
+    sessions.forEach(session => {
+      mergedMap.set(session.id, session);
+    });
+
+    const mergedData = Array.from(mergedMap.values());
+
+    const sessionsWithTimestamps = mergedData.map(session => ({
       ...session,
       synced: false,
       updatedAt: new Date().toISOString(),
@@ -352,7 +398,23 @@ class SyncManager {
   }
 
   async savePoints(points: PointEvent[]): Promise<void> {
-    const pointsWithTimestamps = points.map(point => ({
+    // Merge with existing local data to avoid overwriting other data
+    const existingData = this.getFromLocalStorage<PointEvent>(STORAGE_KEYS.points);
+    const mergedMap = new Map<string, PointEvent>();
+
+    // Add all existing data first
+    existingData.forEach(point => {
+      mergedMap.set(point.id, point);
+    });
+
+    // Override with the points being saved (they take precedence)
+    points.forEach(point => {
+      mergedMap.set(point.id, point);
+    });
+
+    const mergedData = Array.from(mergedMap.values());
+
+    const pointsWithTimestamps = mergedData.map(point => ({
       ...point,
       synced: false,
       updatedAt: new Date().toISOString(),
@@ -390,7 +452,23 @@ class SyncManager {
   }
 
   async saveAwards(awards: AwardUnlock[]): Promise<void> {
-    const awardsWithTimestamps = awards.map(award => ({
+    // Merge with existing local data to avoid overwriting other data
+    const existingData = this.getFromLocalStorage<AwardUnlock>(STORAGE_KEYS.awards);
+    const mergedMap = new Map<string, AwardUnlock>();
+
+    // Add all existing data first
+    existingData.forEach(award => {
+      mergedMap.set(award.id, award);
+    });
+
+    // Override with the awards being saved (they take precedence)
+    awards.forEach(award => {
+      mergedMap.set(award.id, award);
+    });
+
+    const mergedData = Array.from(mergedMap.values());
+
+    const awardsWithTimestamps = mergedData.map(award => ({
       ...award,
       synced: false,
       updatedAt: new Date().toISOString(),

@@ -11,8 +11,12 @@ function LoadingScreen({ message = "Loading..." }: { message?: string }) {
       <div className="text-center space-y-6">
         {/* Animated icon */}
         <div className="relative">
-          <div className="w-16 h-16 mx-auto bg-gradient-to-br from-orange-500 to-pink-500 rounded-xl flex items-center justify-center shadow-xl">
-            <span className="text-2xl animate-bounce">📊</span>
+          <div className="w-16 h-16 mx-auto bg-gradient-to-br from-orange-500 to-pink-500 rounded-xl flex items-center justify-center shadow-xl overflow-hidden">
+            <img
+              src="/icon-512.png"
+              alt="Bollywood Beatz Logo"
+              className="w-full h-full object-contain animate-bounce"
+            />
           </div>
         </div>
 
@@ -422,7 +426,7 @@ export default function ClassProfilePage() {
             >
               <div>
                 <p className="text-sm text-neutral-300">
-                  {new Date(s.startedAtISO).toLocaleString()}
+                  {new Date(s.startedAtISO).toLocaleString('en-GB')}
                 </p>
                 <p className="text-xs text-neutral-500">
                   Register #{sessions.length - idx}

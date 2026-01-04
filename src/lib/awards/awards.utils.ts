@@ -59,8 +59,8 @@ export function formatAwardPeriod(award: AwardUnlock): string {
     if (startISO && endISO) {
       const start = new Date(startISO);
       const end = new Date(endISO);
-      const startMonth = start.toLocaleDateString(undefined, { month: "short" });
-      const endMonth = end.toLocaleDateString(undefined, { month: "short" });
+      const startMonth = start.toLocaleDateString('en-GB', { month: "short" });
+      const endMonth = end.toLocaleDateString('en-GB', { month: "short" });
       const year = start.getFullYear();
       if (startMonth === endMonth) {
         return `${startMonth} ${year}`;

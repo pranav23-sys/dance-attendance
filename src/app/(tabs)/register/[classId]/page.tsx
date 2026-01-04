@@ -17,8 +17,12 @@ function LoadingScreen({ message = "Loading..." }: { message?: string }) {
       <div className="text-center space-y-6">
         {/* Animated icon */}
         <div className="relative">
-          <div className="w-16 h-16 mx-auto bg-gradient-to-br from-orange-500 to-pink-500 rounded-xl flex items-center justify-center shadow-xl">
-            <span className="text-2xl animate-bounce">📝</span>
+          <div className="w-16 h-16 mx-auto bg-gradient-to-br from-orange-500 to-pink-500 rounded-xl flex items-center justify-center shadow-xl overflow-hidden">
+            <img
+              src="/icon-512.png"
+              alt="Bollywood Beatz Logo"
+              className="w-full h-full object-contain animate-bounce"
+            />
           </div>
         </div>
 
@@ -173,7 +177,7 @@ export default function RegisterPage() {
 
   const now = useMemo(() => new Date(), []);
   const todayLabel = useMemo(() => {
-    return now.toLocaleDateString(undefined, {
+    return now.toLocaleDateString('en-GB', {
       weekday: "long",
       day: "numeric",
       month: "short",
@@ -237,12 +241,11 @@ export default function RegisterPage() {
   useEffect(() => {
     if (!hydrated) return;
 
-    const saved = localStorage.getItem(LS_SESSIONS);
-    const all: RegisterSession[] = saved ? JSON.parse(saved) : [];
-    const withoutThisClass = all.filter((x) => x.classId !== classId);
-    const merged = [...withoutThisClass, ...sessions];
-    localStorage.setItem(LS_SESSIONS, JSON.stringify(merged));
-  }, [sessions, classId, hydrated]);
+    // Save through sync manager (handles online/offline sync and merging)
+    saveSessions(sessions).catch((error) => {
+      console.error('Error saving sessions:', error);
+    });
+  }, [sessions, hydrated, saveSessions]);
 
   // ------- Today’s sessions -------
   const todaysSessions = useMemo(() => {
@@ -333,6 +336,8 @@ export default function RegisterPage() {
 
     setSessions((prev) => [...prev, newSession]);
     setActiveSessionId(id);
+
+    // saveSessions will be called automatically by the useEffect when sessions state changes
   };
 
   const givePoints = (studentId: string, reason: string, value: number, sessionId?: string) => {
@@ -502,7 +507,7 @@ export default function RegisterPage() {
         {isViewingPast && (
           <div className="mb-4 rounded-2xl bg-white/5 ring-1 ring-white/10 p-3 text-sm text-neutral-300">
             Viewing a past register •{" "}
-            <span className="text-neutral-400">{new Date(activeSession.startedAtISO).toLocaleString()}</span>
+            <span className="text-neutral-400">{new Date(activeSession.startedAtISO).toLocaleString('en-GB')}</span>
           </div>
         )}
 
