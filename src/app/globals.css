@@ -131,8 +131,13 @@ body {
   contain: layout style paint;
   /* Optimize for GPU acceleration */
   will-change: transform;
-  /* Use efficient color spaces */
-  color: oklch(0.6 0.15 240);
+}
+
+@supports (color: oklch(0.6 0.15 240)) {
+  .energy-efficient {
+    /* Use efficient color spaces when supported */
+    color: oklch(0.6 0.15 240);
+  }
 }
 
 /* Future CSS - Network-aware features (not yet supported, commented out)
