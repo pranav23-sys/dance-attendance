@@ -408,7 +408,8 @@ export default function StudentsPage() {
                 </div>
               </div>
             );
-          })}
+          })
+        )}
       </div>
 
       {/* REGISTERS ADMIN */}
