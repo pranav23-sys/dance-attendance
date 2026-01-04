@@ -140,20 +140,20 @@ body {
   }
 }
 
-/* Future CSS - Network-aware features (not yet supported, commented out)
+/* Future CSS - Network-aware features (not yet supported, commented out) */
+/*
 @media (network-type: slow-2g), (network-type: 2g) {
-  /* Reduce animations on slow connections
+  Reduce animations on slow connections
   *, *::before, *::after {
     animation-duration: 0.1s !important;
     transition-duration: 0.1s !important;
   }
 
-  /* Simplify visual effects
+  Simplify visual effects
   .backdrop-blur {
     backdrop-filter: none;
   }
 }
-*/
 */
 
 /* Battery-aware features (future CSS) */

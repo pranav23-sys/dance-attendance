@@ -47,6 +47,7 @@ type Status = "ABSENT" | "PRESENT" | "LATE" | "EXCUSED";
 const LS_CLASSES = "bb_classes";
 const LS_STUDENTS = "bb_students";
 const LS_SESSIONS = "bb_sessions";
+const LS_POINTS = "bb_points";
 
 export default function StudentsPage() {
   const router = useRouter();
