@@ -203,6 +203,44 @@ export default function StudentsPage() {
     }
   };
 
+  const cleanupUnsyncedData = async () => {
+    const unsyncedSessions = sessions.filter(s => !s.synced && !s.deleted);
+    const unsyncedPoints = points.filter(p => !p.synced && !p.deleted);
+
+    if (unsyncedSessions.length === 0 && unsyncedPoints.length === 0) {
+      showModal("alert", "No Unsynced Data", "All your data is synced to the cloud!");
+      return;
+    }
+
+    const message = `Remove ${unsyncedSessions.length} unsynced session(s) and ${unsyncedPoints.length} unsynced point(s)? This data only exists locally and will be permanently lost.`;
+
+    showModal(
+      "confirm",
+      "Clean Unsynced Data",
+      message,
+      async () => {
+        // Remove unsynced sessions completely (hard delete)
+        const cleanedSessions = sessions.filter(s => s.synced || s.deleted);
+        // Remove unsynced points completely (hard delete)
+        const cleanedPoints = points.filter(p => p.synced || p.deleted);
+
+        setSessions(cleanedSessions);
+        setPoints(cleanedPoints);
+
+        try {
+          await Promise.all([
+            saveSessions(cleanedSessions),
+            savePoints(cleanedPoints)
+          ]);
+          showModal("alert", "Cleanup Complete", `Removed ${unsyncedSessions.length} unsynced session(s) and ${unsyncedPoints.length} unsynced point(s).`);
+        } catch (error) {
+          console.error('Error during cleanup:', error);
+          showModal("alert", "Error", "Failed to clean up unsynced data. Please try again.");
+        }
+      }
+    );
+  };
+
   /* ---------- DERIVED ---------- */
   const sessionsByClass = useMemo(() => {
     const map: Record<string, RegisterSession[]> = {};
@@ -414,9 +452,17 @@ export default function StudentsPage() {
       </div>
 
       {/* REGISTERS ADMIN */}
-      <h2 className="text-xl font-semibold mt-12 mb-4 font-title">
-        Registers
-      </h2>
+      <div className="mt-12 mb-4 flex items-center justify-between">
+        <h2 className="text-xl font-semibold font-title">
+          Registers
+        </h2>
+        <button
+          onClick={() => cleanupUnsyncedData()}
+          className="text-xs bg-amber-600/20 text-amber-400 px-3 py-2 rounded-lg hover:bg-amber-600/30 transition"
+        >
+          Clean Unsynced
+        </button>
+      </div>
 
       <div className="space-y-4">
         {Object.entries(sessionsByClass).map(([classId, list]) => {
@@ -437,15 +483,19 @@ export default function StudentsPage() {
                 >
                   <span>
                     {new Date(s.startedAtISO).toLocaleString('en-GB')}
+                    {!s.synced && (
+                      <span className="ml-2 text-amber-400 text-xs">(unsynced)</span>
+                    )}
                   </span>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       const sessionTime = new Date(s.startedAtISO).toLocaleString('en-GB');
+                      const syncStatus = s.synced ? "" : " (This data is not synced to cloud)";
                       showModal(
                         "confirm",
                         "Delete Register",
-                        `Delete register from ${sessionTime}? This cannot be undone.`,
+                        `Delete register from ${sessionTime}?${syncStatus} This cannot be undone.`,
                         () => deleteSession(s.id)
                       );
                     }}
