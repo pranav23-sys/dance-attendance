@@ -50,12 +50,13 @@ const LS_SESSIONS = "bb_sessions";
 
 export default function StudentsPage() {
   const router = useRouter();
-  const { getClasses, getStudents, getSessions, saveStudents, saveSessions } = useSyncData();
+  const { getClasses, getStudents, getSessions, getPoints, saveStudents, saveSessions, savePoints } = useSyncData();
   const { showModal } = useModal();
 
   const [classes, setClasses] = useState<DanceClass[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [sessions, setSessions] = useState<RegisterSession[]>([]);
+  const [points, setPoints] = useState<PointEvent[]>([]);
 
   const [newName, setNewName] = useState("");
   const [newClassId, setNewClassId] = useState("");
@@ -67,21 +68,24 @@ export default function StudentsPage() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [classesData, studentsData, sessionsData] = await Promise.all([
+        const [classesData, studentsData, sessionsData, pointsData] = await Promise.all([
           getClasses(),
           getStudents(),
           getSessions(),
+          getPoints(),
         ]);
 
         setClasses(classesData);
         setStudents(studentsData);
         setSessions(sessionsData);
+        setPoints(pointsData);
       } catch (error) {
         console.error('Error loading data:', error);
         // Fallback to localStorage
         setClasses(JSON.parse(localStorage.getItem(LS_CLASSES) || "[]"));
         setStudents(JSON.parse(localStorage.getItem(LS_STUDENTS) || "[]"));
         setSessions(JSON.parse(localStorage.getItem(LS_SESSIONS) || "[]").filter((s: any) => !s.deleted));
+        setPoints(JSON.parse(localStorage.getItem(LS_POINTS) || "[]").filter((p: any) => !p.deleted));
       } finally {
         setLoading(false);
       }
@@ -170,12 +174,25 @@ export default function StudentsPage() {
         : s
     );
 
+    // Mark any points associated with this session as deleted
+    const updatedPoints = points.map((p) =>
+      p.sessionId === id
+        ? { ...p, deleted: true, synced: false, updatedAt: new Date().toISOString() }
+        : p
+    );
+
     console.log('Updated sessions:', updatedSessions.filter(s => s.deleted));
+    console.log('Updated points:', updatedPoints.filter(p => p.deleted && p.sessionId === id));
+
     setSessions(updatedSessions);
+    setPoints(updatedPoints);
 
     try {
-      await saveSessions(updatedSessions);
-      console.log('Session marked as deleted successfully');
+      await Promise.all([
+        saveSessions(updatedSessions),
+        savePoints(updatedPoints)
+      ]);
+      console.log('Session and associated points marked as deleted successfully');
     } catch (error) {
       console.error('Error deleting session:', error);
     }
@@ -188,6 +205,14 @@ export default function StudentsPage() {
       if (!map[s.classId]) map[s.classId] = [];
       map[s.classId].push(s);
     }
+
+    // Sort each class's sessions by most recent first
+    Object.keys(map).forEach(classId => {
+      map[classId].sort((a, b) =>
+        new Date(b.startedAtISO).getTime() - new Date(a.startedAtISO).getTime()
+      );
+    });
+
     return map;
   }, [sessions]);
 
